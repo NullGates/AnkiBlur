@@ -1,0 +1,13 @@
+--- a/qt/aqt/__init__.py
++++ b/qt/aqt/__init__.py
+@@ -15,8 +15,8 @@ import zipfile
+ from typing import Any
+
+ import anki
+-appName = "Anki"
+-appVersion = anki.version
++appName = "AnkiBlur"
++appVersion = anki.version + "-blur"
+ appWebsite = "https://apps.ankiweb.net/"
+ appDonate = "https://patreon.com/damien_elmes"
+ appShared = "https://ankiweb.net/shared/"

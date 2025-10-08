@@ -1,0 +1,61 @@
+{
+  "app": {
+    "name": "AnkiBlur",
+    "binary_name": "ankiblur",
+    "description": "Anki with transparency and blur effects",
+    "homepage": "https://github.com/ankiblur/ankiblur",
+    "license": "AGPL-3.0"
+  },
+  "build": {
+    "python_version": "3.11",
+    "node_version": "18",
+    "rust_toolchain": "stable"
+  },
+  "platforms": {
+    "linux": {
+      "architectures": ["x64", "arm64"],
+      "packages": ["tar.gz", "AppImage", "deb"],
+      "dependencies": {
+        "system": ["build-essential", "libssl-dev", "pkg-config"],
+        "python": ["wheel", "setuptools", "build"]
+      }
+    },
+    "windows": {
+      "architectures": ["x64"],
+      "packages": ["zip", "exe"],
+      "dependencies": {
+        "system": ["protoc"],
+        "python": ["wheel", "setuptools", "build"]
+      }
+    },
+    "macos": {
+      "architectures": ["x64", "arm64"],
+      "packages": ["dmg", "tar.gz"],
+      "dependencies": {
+        "system": ["protobuf"],
+        "python": ["wheel", "setuptools", "build"]
+      }
+    }
+  },
+  "patches": {
+    "order": ["branding", "transparency", "version"],
+    "branding": {
+      "description": "Replace Anki branding with AnkiBlur",
+      "files": ["qt/aqt/__init__.py", "qt/aqt/about.py", "qt/aqt/main.py"]
+    },
+    "transparency": {
+      "description": "Add transparency and blur effects to UI",
+      "files": ["qt/aqt/theme.py", "qt/aqt/webview.py"]
+    },
+    "version": {
+      "description": "Update version strings and metadata",
+      "files": ["pyproject.toml", "qt/aqt/__init__.py"]
+    }
+  },
+  "release": {
+    "draft": false,
+    "prerelease": false,
+    "generate_release_notes": true,
+    "asset_naming": "AnkiBlur-{version}-{platform}-{arch}.{ext}"
+  }
+}

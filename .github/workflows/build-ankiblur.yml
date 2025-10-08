@@ -1,0 +1,186 @@
+name: build-ankiblur
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_version:
+        type: boolean
+        description: Force update version
+      generate_assets:
+        type: boolean
+        description: Generate assets
+      anki_version:
+        type: string
+        description: Specific Anki version to build
+  repository_dispatch:
+    types: [new-anki-release]
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+    - '**/*.md'
+    - 'docs/**'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+    - '**/*.md'
+
+env:
+  APP_NAME: AnkiBlur
+  BINARY_NAME: ankiblur
+  ANKI_REPO: ankitects/anki
+  BLUR_REPO: ${{ github.repository }}
+  ORG_NAME: ${{ github.repository_owner }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      ANKI_VERSION: ${{ env.ANKI_VERSION }}
+      ANKI_COMMIT: ${{ env.ANKI_COMMIT }}
+      BLUR_VERSION: ${{ env.BLUR_VERSION }}
+      SHOULD_BUILD: ${{ env.SHOULD_BUILD }}
+      SHOULD_DEPLOY: ${{ env.SHOULD_DEPLOY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Anki version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_VERSION: ${{ github.event.inputs.force_version }}
+          ANKI_VERSION_INPUT: ${{ github.event.inputs.anki_version }}
+        run: ./scripts/check_version.sh
+
+      - name: Check existing AnkiBlur releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/check_existing_releases.sh
+
+  build:
+    needs: check
+    if: needs.check.outputs.SHOULD_BUILD == 'yes' || github.event.inputs.generate_assets == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            artifact_name: linux-x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+            artifact_name: linux-arm64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            artifact_name: windows-x64
+          - os: macos-latest
+            platform: macos
+            arch: x64
+            artifact_name: macos-x64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            artifact_name: macos-arm64
+
+    env:
+      ANKI_VERSION: ${{ needs.check.outputs.ANKI_VERSION }}
+      ANKI_COMMIT: ${{ needs.check.outputs.ANKI_COMMIT }}
+      BLUR_VERSION: ${{ needs.check.outputs.BLUR_VERSION }}
+      SHOULD_DEPLOY: ${{ needs.check.outputs.SHOULD_DEPLOY }}
+      PLATFORM: ${{ matrix.platform }}
+      ARCH: ${{ matrix.arch }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'linux' && matrix.arch == 'arm64' && 'aarch64-unknown-linux-gnu' || '' }}
+
+      - name: Install platform dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev pkg-config
+
+      - name: Install platform dependencies (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          choco install -y protoc
+
+      - name: Install platform dependencies (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          brew install protobuf
+
+      - name: Download Anki source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/get_anki.sh
+
+      - name: Apply patches
+        run: ./scripts/apply_patches.sh
+
+      - name: Build AnkiBlur
+        run: ./scripts/build.sh
+
+      - name: Package AnkiBlur
+        run: ./scripts/package.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ankiblur-${{ matrix.artifact_name }}
+          path: dist/
+          retention-days: ${{ needs.check.outputs.SHOULD_DEPLOY == 'yes' && 30 || 7 }}
+
+  release:
+    needs: [check, build]
+    if: needs.check.outputs.SHOULD_DEPLOY == 'yes'
+    runs-on: ubuntu-latest
+    env:
+      BLUR_VERSION: ${{ needs.check.outputs.BLUR_VERSION }}
+      ANKI_VERSION: ${{ needs.check.outputs.ANKI_VERSION }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/create_release.sh
+
+  update-version-tracking:
+    needs: [check, release]
+    if: needs.check.outputs.SHOULD_DEPLOY == 'yes'
+    runs-on: ubuntu-latest
+    env:
+      BLUR_VERSION: ${{ needs.check.outputs.BLUR_VERSION }}
+      ANKI_VERSION: ${{ needs.check.outputs.ANKI_VERSION }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update version tracking
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/update_version_tracking.sh

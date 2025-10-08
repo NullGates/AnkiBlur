@@ -1,0 +1,26 @@
+--- a/qt/aqt/about.py
++++ b/qt/aqt/about.py
+@@ -44,6 +44,7 @@ class AboutDialog(QDialog):
+     def setupUi(self) -> None:
+         self.setWindowTitle("About AnkiBlur")
+         self.setMinimumWidth(400)
++        self.setupTransparency()
+         self.setMinimumHeight(200)
+
+         layout = QVBoxLayout()
+@@ -89,6 +90,15 @@ class AboutDialog(QDialog):
+
+         self.setLayout(layout)
+
++    def setupTransparency(self) -> None:
++        """Setup dialog transparency."""
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
++        self.setWindowOpacity(0.95)
++        self.setStyleSheet("""
++            QDialog {
++                background-color: rgba(240, 240, 240, 220);
++                backdrop-filter: blur(8px);
++            }
++        """)
++
+     def on_copy_debug_info(self) -> None:

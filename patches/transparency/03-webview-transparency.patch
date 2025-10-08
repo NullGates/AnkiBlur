@@ -1,0 +1,27 @@
+--- a/qt/aqt/webview.py
++++ b/qt/aqt/webview.py
+@@ -89,6 +89,7 @@ class AnkiWebView(QWebEngineView):
+         self._onBridgeCmd = onBridgeCmd
+         self._loadFinishedCB = None
+         self._domDone = True
++        self.setupTransparency()
+
+         QWebEngineView.__init__(self, parent=parent)
+         self.set_open_links_externally(True)
+@@ -103,6 +104,17 @@ class AnkiWebView(QWebEngineView):
+         self._page.profile().setHttpCacheType(
+             QWebEngineProfile.HttpCacheType.NoCache
+         )
++
++    def setupTransparency(self) -> None:
++        """Setup webview transparency."""
++        # Make webview background transparent
++        self.page().setBackgroundColor(QColor(255, 255, 255, 0))
++
++        # Inject CSS for transparency effects
++        self.page().runJavaScript("""
++            document.documentElement.style.background = 'rgba(255, 255, 255, 0.9)';
++            document.body.style.background = 'rgba(255, 255, 255, 0.9)';
++        """)
+
+     def eventFilter(self, obj: QObject, evt: QEvent) -> bool:

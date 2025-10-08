@@ -1,0 +1,25 @@
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,9 +1,9 @@
+ [project]
+-name = "anki"
++name = "ankiblur"
+ version = "23.12.1"
+-description = "Spaced repetition flashcard program"
++description = "Spaced repetition flashcard program with transparency effects"
+ authors = [
+-    { name = "Damien Elmes", email = "dae@ichi2.net" },
++    { name = "AnkiBlur Team", email = "contact@ankiblur.net" },
+ ]
+ license = { text = "AGPL-3.0-or-later" }
+ requires-python = ">=3.9"
+@@ -25,8 +25,8 @@ classifiers = [
+     "Topic :: Education",
+ ]
+ keywords = ["spaced repetition", "flashcards", "learning"]
+-homepage = "https://apps.ankiweb.net"
+-repository = "https://github.com/ankitects/anki"
++homepage = "https://github.com/ankiblur/ankiblur"
++repository = "https://github.com/ankiblur/ankiblur"
+
+ [project.optional-dependencies]

@@ -1,0 +1,9 @@
+{
+  "1.0.0": {
+    "anki_version": "v23.12.1",
+    "anki_commit": "example_commit_hash",
+    "build_date": "2024-01-15T10:30:00Z",
+    "patches_applied": ["branding", "transparency", "version"],
+    "release_notes": "Initial AnkiBlur release based on Anki 23.12.1"
+  }
+}
