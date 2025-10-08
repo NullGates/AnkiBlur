@@ -138,6 +138,13 @@ main() {
         exit 1
     fi
 
+    # Check if patches should be skipped
+    if [[ "${SKIP_PATCHES:-false}" == "true" ]]; then
+        echo "SKIP_PATCHES=true, skipping all patches"
+        echo "Building vanilla Anki without modifications"
+        return 0
+    fi
+
     # Define patch order (patches are applied in this order)
     local patch_order=(
         "branding"

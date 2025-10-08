@@ -92,6 +92,7 @@ jobs:
       SHOULD_DEPLOY: ${{ needs.check.outputs.SHOULD_DEPLOY }}
       PLATFORM: ${{ matrix.platform }}
       ARCH: ${{ matrix.arch }}
+      SKIP_PATCHES: true
 
     steps:
       - uses: actions/checkout@v4
