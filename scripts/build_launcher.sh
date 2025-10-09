@@ -91,6 +91,30 @@ download_uv_binaries() {
     cd "$ROOT_DIR"
 }
 
+# Function to setup launcher in Anki workspace
+setup_launcher_in_anki_workspace() {
+    local anki_dir="$ROOT_DIR/anki"
+    local anki_launcher_dir="$anki_dir/qt/launcher"
+
+    if [[ ! -d "$anki_dir" ]]; then
+        echo "Error: Anki source not found at $anki_dir. Please run get_anki.sh first."
+        exit 1
+    fi
+
+    echo "Setting up AnkiBlur launcher in Anki workspace..."
+
+    # Backup original Anki launcher if it exists
+    if [[ -d "$anki_launcher_dir" ]]; then
+        mv "$anki_launcher_dir" "$anki_launcher_dir.backup"
+    fi
+
+    # Copy our AnkiBlur launcher to Anki workspace
+    cp -r "$LAUNCHER_DIR" "$anki_launcher_dir"
+
+    # Update LAUNCHER_DIR to point to workspace location
+    LAUNCHER_DIR="$anki_launcher_dir"
+}
+
 # Function to build launcher for specific target
 build_launcher_target() {
     local target="$1"
@@ -267,6 +291,9 @@ main() {
     # Setup build environment
     setup_rust
     setup_cross_compilation
+
+    # Setup launcher in Anki workspace
+    setup_launcher_in_anki_workspace
 
     # Download dependencies
     download_uv_binaries
