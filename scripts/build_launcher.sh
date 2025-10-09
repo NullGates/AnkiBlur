@@ -60,7 +60,7 @@ setup_cross_compilation() {
 download_uv_binaries() {
     echo "Downloading uv binaries..."
 
-    local uv_version="0.5.8"  # Update this to match Anki's version
+    local uv_version="0.7.13"  # Match official Anki version
     local uv_dir="$OUTPUT_DIR/uv-binaries"
 
     mkdir -p "$uv_dir"
