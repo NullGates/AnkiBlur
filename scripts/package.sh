@@ -101,15 +101,22 @@ create_linux_launcher() {
 # AnkiBlur launcher script
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$SCRIPT_DIR/.venv"
+
+# Create virtual environment if it doesn't exist
+if [[ ! -d "$VENV_DIR" ]]; then
+    echo "Setting up AnkiBlur environment..."
+    python3 -m venv "$VENV_DIR"
+
+    # Install wheel files
+    "$VENV_DIR/bin/pip" install --no-deps "$SCRIPT_DIR"/*.whl
+fi
 
 # Set library path for bundled libraries
 export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:${LD_LIBRARY_PATH:-}"
 
-# Set Python path
-export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH:-}"
-
-# Launch AnkiBlur
-exec python3 "$SCRIPT_DIR/aqt" "$@"
+# Launch AnkiBlur using the virtual environment
+exec "$VENV_DIR/bin/python" -m aqt "$@"
 EOF
 
     chmod +x "$app_dir/ankiblur"
