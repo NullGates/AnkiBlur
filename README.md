@@ -1,14 +1,14 @@
 # AnkiBlur
 
-A modified version of [Anki](https://github.com/ankitects/anki) with window transparency effects. Automatically tracks and builds against new Anki releases.
+Takes the Official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
 
 ## Downloads
 
 | Platform | Downloads | Transparency Support |
 |----------|-----------|---------------------|
-| 🐧 **Linux** | [AppImage](../../releases/latest/download/AnkiBlur-latest-x86_64.AppImage) • [.deb](../../releases/latest) | Requires compositor (KWin, Mutter, etc.) |
-| 🪟 **Windows** | [Installer](../../releases/latest) | Native blur support (Windows 8+) |
-| 🍎 **macOS** | [.dmg](../../releases/latest) | Native blur support |
+| <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" />| [AppImage](../../releases/latest/download/AnkiBlur-latest-x86_64.AppImage) • [.deb](../../releases/latest) | Requires compositor (KWin, Mutter, etc.) |
+| <img src="https://img.shields.io/badge/windows-%230078D6.svg?&style=for-the-badge&logo=windows&logoColor=white" /> | [Installer](../../releases/latest) | Native blur support (Windows 8+) |
+| <img src="https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=apple&logoColor=white" />| [.dmg](../../releases/latest) | Native blur support |
 
 > **Note**: Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
 
