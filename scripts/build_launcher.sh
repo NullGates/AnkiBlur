@@ -113,6 +113,9 @@ setup_launcher_in_anki_workspace() {
 
     # Update LAUNCHER_DIR to point to workspace location
     LAUNCHER_DIR="$anki_launcher_dir"
+
+    # Update TARGET_DIR to point to Anki workspace target
+    TARGET_DIR="${CARGO_TARGET_DIR:-$anki_dir/target}"
 }
 
 # Function to build launcher for specific target
