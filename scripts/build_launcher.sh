@@ -111,6 +111,14 @@ setup_launcher_in_anki_workspace() {
     # Copy our AnkiBlur launcher to Anki workspace
     cp -r "$LAUNCHER_DIR" "$anki_launcher_dir"
 
+    # Copy the .python-version file from Anki root to launcher directory
+    if [[ -f "$anki_dir/.python-version" ]]; then
+        cp "$anki_dir/.python-version" "$anki_launcher_dir/"
+        echo "Copied .python-version from Anki: $(cat "$anki_dir/.python-version")"
+    else
+        echo "Warning: .python-version not found in Anki repo"
+    fi
+
     # Update LAUNCHER_DIR to point to workspace location
     LAUNCHER_DIR="$anki_launcher_dir"
 
