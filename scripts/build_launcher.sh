@@ -125,6 +125,9 @@ build_launcher_target() {
 
     echo "Building launcher for $target..."
 
+    # Ensure target is installed
+    rustup target add "$target"
+
     cd "$LAUNCHER_DIR"
 
     case "$target" in
