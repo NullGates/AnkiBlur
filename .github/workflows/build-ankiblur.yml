@@ -116,7 +116,10 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libssl-dev pkg-config
+          sudo apt-get install -y bash grep findutils curl gcc g++ make git rsync \
+            build-essential libssl-dev pkg-config ninja-build \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
+            mpv lame
 
       - name: Install platform dependencies (Windows)
         if: matrix.platform == 'windows'
