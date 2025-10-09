@@ -132,12 +132,22 @@ build_launcher_target() {
 
     case "$target" in
         "x86_64-unknown-linux-gnu")
-            cargo build --release --target "$target"
+            # Use musl for static linking
+            rustup target add x86_64-unknown-linux-musl
+            cargo build --release --target x86_64-unknown-linux-musl
+            # Copy the musl binary with the original target name for compatibility
+            mkdir -p "$TARGET_DIR/$target/release"
+            cp "$TARGET_DIR/x86_64-unknown-linux-musl/release/launcher" "$TARGET_DIR/$target/release/launcher"
             ;;
         "aarch64-unknown-linux-gnu")
-            # Set cross-compilation linker
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            cargo build --release --target "$target"
+            # Use musl for static linking
+            rustup target add aarch64-unknown-linux-musl
+            # Set cross-compilation linker for musl
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
+            cargo build --release --target aarch64-unknown-linux-musl
+            # Copy the musl binary with the original target name for compatibility
+            mkdir -p "$TARGET_DIR/$target/release"
+            cp "$TARGET_DIR/aarch64-unknown-linux-musl/release/launcher" "$TARGET_DIR/$target/release/launcher"
             ;;
         *)
             echo "Error: Unsupported target $target"
@@ -306,6 +316,8 @@ main() {
     cd "$LAUNCHER_DIR"
     rustup target add x86_64-unknown-linux-gnu
     rustup target add aarch64-unknown-linux-gnu
+    rustup target add x86_64-unknown-linux-musl
+    rustup target add aarch64-unknown-linux-musl
     cd "$ROOT_DIR"
 
     # Download dependencies
