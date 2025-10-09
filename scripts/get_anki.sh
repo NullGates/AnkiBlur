@@ -16,7 +16,7 @@ if [[ -d "$ANKI_DIR" ]]; then
     rm -rf "$ANKI_DIR"
 fi
 
-# Function to download Anki source
+# Function to clone Anki source
 download_anki() {
     local version="${ANKI_VERSION:-}"
     local commit="${ANKI_COMMIT:-}"
@@ -26,37 +26,34 @@ download_anki() {
         exit 1
     fi
 
-    echo "Downloading Anki $version..."
+    echo "Cloning Anki repository for $version..."
 
-    # Create temporary directory for download
-    local temp_dir=$(mktemp -d)
-    cd "$temp_dir"
+    # Clone the repository
+    echo "Cloning from: https://github.com/$ANKI_REPO.git"
+    git clone --recursive "https://github.com/$ANKI_REPO.git" "$ANKI_DIR"
 
-    # Download the source tarball
-    local download_url="https://github.com/$ANKI_REPO/archive/$version.tar.gz"
-    echo "Downloading from: $download_url"
+    cd "$ANKI_DIR"
 
-    curl -L -o anki-source.tar.gz "$download_url"
+    # Checkout the specific version/tag
+    echo "Checking out $version..."
+    git checkout "$version"
 
-    # Extract
-    echo "Extracting Anki source..."
-    tar -xzf anki-source.tar.gz
+    # Update submodules to match the tag
+    echo "Updating submodules..."
+    git submodule update --init --recursive
 
-    # Find the extracted directory (it will be anki-VERSION)
-    local extracted_dir=$(find . -maxdepth 1 -type d -name "anki-*" | head -1)
-    if [[ -z "$extracted_dir" ]]; then
-        echo "Error: Could not find extracted Anki directory"
-        exit 1
+    # Verify we're on the right commit if provided
+    if [[ -n "$commit" ]]; then
+        local current_commit=$(git rev-parse HEAD)
+        if [[ "$current_commit" != "$commit" ]]; then
+            echo "Warning: Expected commit $commit, but got $current_commit"
+        else
+            echo "Verified commit matches: $commit"
+        fi
     fi
 
-    # Move to final location
-    mv "$extracted_dir" "$ANKI_DIR"
-
-    # Clean up
     cd "$ROOT_DIR"
-    rm -rf "$temp_dir"
-
-    echo "Anki source downloaded to: $ANKI_DIR"
+    echo "Anki repository cloned to: $ANKI_DIR"
 }
 
 # Function to verify Anki source
