@@ -71,7 +71,7 @@ jobs:
             platform: linux
             arch: x64
             artifact_name: linux-x64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm64
             platform: linux
             arch: arm64
             artifact_name: linux-arm64
