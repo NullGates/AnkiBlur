@@ -1,6 +1,6 @@
 # AnkiBlur
 
-This repo take the official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
+This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
 
 ## Downloads
 
