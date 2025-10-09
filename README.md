@@ -1,6 +1,6 @@
 # AnkiBlur
 
-Takes the Official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
+This repo take the official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
 
 ## Downloads
 
@@ -31,7 +31,7 @@ export BLUR_VERSION="23.12.1.1"
 ## How It Works
 
 AnkiBlur applies patches to Anki source code:
-1. **Branding**: Changes "Anki" to "AnkiBlur"
+1. **Branding**: Changes "Anki" to "AnkiBlur" (I'm not allowed to post as "Anki", altough all credits goes to the ankitechts !)
 2. **Transparency**: Adds `setWindowOpacity(0.95)` and CSS `backdrop-filter: blur(10px)`
 3. **Version**: Updates metadata
 
