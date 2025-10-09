@@ -16,6 +16,7 @@ BLUR_VERSION="${BLUR_VERSION:-1.0.0}"
 
 echo "Building AnkiBlur launcher for version $BLUR_VERSION"
 echo "Debug: Starting launcher build process..."
+echo "Debug: Timestamp: $(date)"
 
 # Function to setup Rust toolchain
 setup_rust() {
