@@ -140,14 +140,25 @@ build_launcher_target() {
             cp "$TARGET_DIR/x86_64-unknown-linux-musl/release/launcher" "$TARGET_DIR/$target/release/launcher"
             ;;
         "aarch64-unknown-linux-gnu")
-            # Use musl for static linking
+            # Use musl for static linking with proper cross-compilation setup
             rustup target add aarch64-unknown-linux-musl
-            # Set cross-compilation linker for musl
+
+            # Set environment for static musl linking
+            export CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc
+            export CXX_aarch64_unknown_linux_musl=aarch64-linux-gnu-g++
+            export AR_aarch64_unknown_linux_musl=aarch64-linux-gnu-ar
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
-            cargo build --release --target aarch64-unknown-linux-musl
-            # Copy the musl binary with the original target name for compatibility
-            mkdir -p "$TARGET_DIR/$target/release"
-            cp "$TARGET_DIR/aarch64-unknown-linux-musl/release/launcher" "$TARGET_DIR/$target/release/launcher"
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static"
+
+            echo "Building static ARM64 binary with musl..."
+            if cargo build --release --target aarch64-unknown-linux-musl; then
+                echo "ARM64 musl build successful"
+                mkdir -p "$TARGET_DIR/$target/release"
+                cp "$TARGET_DIR/aarch64-unknown-linux-musl/release/launcher" "$TARGET_DIR/$target/release/launcher"
+            else
+                echo "ARM64 musl build failed, falling back to glibc build"
+                cargo build --release --target "$target"
+            fi
             ;;
         *)
             echo "Error: Unsupported target $target"
