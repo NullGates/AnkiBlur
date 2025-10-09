@@ -108,8 +108,19 @@ pub fn ensure_glibc_supported() -> Result<()> {
     };
 
     let (major, minor) = get_glibc_version().unwrap_or_default();
-    if major < 2 || (major == 2 && minor < 36) {
-        anyhow::bail!("Anki requires a modern Linux distro with glibc 2.36 or later.");
+
+    // For static builds (musl), skip the glibc version check since we're not using system glibc
+    #[cfg(target_env = "gnu")]
+    {
+        if major < 2 || (major == 2 && minor < 36) {
+            anyhow::bail!("Anki requires a modern Linux distro with glibc 2.36 or later.");
+        }
+    }
+
+    #[cfg(not(target_env = "gnu"))]
+    {
+        // Static builds don't depend on system glibc, so no version check needed
+        // The static binary includes all necessary libc functionality
     }
 
     Ok(())
