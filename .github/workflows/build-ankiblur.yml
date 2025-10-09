@@ -124,7 +124,7 @@ jobs:
       - name: Install platform dependencies (Windows)
         if: matrix.platform == 'windows'
         run: |
-          choco install -y protoc
+          choco install -y protoc nsis
 
       - name: Install platform dependencies (macOS)
         if: matrix.platform == 'macos'

@@ -191,19 +191,14 @@ package_windows() {
     # Create Windows launcher
     create_windows_launcher "$app_dir"
 
-    # Create ZIP archive
-    cd "$PACKAGE_DIR"
-    if command -v 7z >/dev/null 2>&1; then
-        7z a "AnkiBlur-$BLUR_VERSION-windows-$ARCH.zip" "AnkiBlur-windows-$ARCH"
-    else
-        zip -r "AnkiBlur-$BLUR_VERSION-windows-$ARCH.zip" "AnkiBlur-windows-$ARCH"
+    # Create installer (NSIS required)
+    if ! command -v makensis >/dev/null 2>&1; then
+        echo "Error: NSIS (makensis) is required for Windows packaging"
+        exit 1
     fi
-    rm -rf "AnkiBlur-windows-$ARCH"
 
-    # Create installer if NSIS available
-    if command -v makensis >/dev/null 2>&1; then
-        create_windows_installer
-    fi
+    create_windows_installer
+    rm -rf "AnkiBlur-windows-$ARCH"
 
     echo "Windows packaging complete"
 }
