@@ -301,6 +301,13 @@ main() {
     # Setup launcher in Anki workspace
     setup_launcher_in_anki_workspace
 
+    # Re-install targets for workspace toolchain (Anki may have its own rust-toolchain.toml)
+    echo "Installing targets for workspace toolchain..."
+    cd "$LAUNCHER_DIR"
+    rustup target add x86_64-unknown-linux-gnu
+    rustup target add aarch64-unknown-linux-gnu
+    cd "$ROOT_DIR"
+
     # Download dependencies
     download_uv_binaries
 
