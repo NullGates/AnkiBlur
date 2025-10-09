@@ -85,8 +85,8 @@ create_release() {
         -H "Accept: application/vnd.github.v3+json" \
         "https://api.github.com/repos/$REPO/releases" \
         -d "{
-            \"tag_name\": \"$BLUR_VERSION\",
-            \"target_commitish\": \"master\",
+            \"tag_name\": \"v$BLUR_VERSION\",
+            \"target_commitish\": \"main\",
             \"name\": \"AnkiBlur $BLUR_VERSION\",
             \"body\": $(echo "$release_notes" | jq -Rs .),
             \"draft\": false,
@@ -188,8 +188,8 @@ main() {
     fi
 
     # Check if release already exists
-    if release_exists "$BLUR_VERSION"; then
-        echo "Release $BLUR_VERSION already exists, skipping creation"
+    if release_exists "v$BLUR_VERSION"; then
+        echo "Release v$BLUR_VERSION already exists, skipping creation"
         return
     fi
 
