@@ -217,14 +217,22 @@ create_universal_package() {
     # Create AnkiBlur-specific pyproject.toml (will be created in next step)
     echo "# AnkiBlur package definition - will be populated by package creation script" > "$package_dir/pyproject.toml"
 
-    # Copy .python-version from launcher directory (copied from Anki repo)
+    # Ensure .python-version file exists in package
+    # Try to copy from launcher directory first, then create default
     if [[ -f "$LAUNCHER_DIR/.python-version" ]]; then
         cp "$LAUNCHER_DIR/.python-version" "$package_dir/"
         echo "Copied .python-version: $(cat "$LAUNCHER_DIR/.python-version")"
     else
-        echo "Warning: .python-version not found, creating default"
+        echo "Creating .python-version file with default version 3.13.5"
         echo "3.13.5" > "$package_dir/.python-version"
     fi
+
+    # Always verify the file was created successfully
+    if [[ ! -f "$package_dir/.python-version" ]]; then
+        echo "ERROR: Failed to create .python-version file"
+        exit 1
+    fi
+    echo "✓ .python-version created: $(cat "$package_dir/.python-version")"
 
     # Set executable permissions
     chmod +x \
