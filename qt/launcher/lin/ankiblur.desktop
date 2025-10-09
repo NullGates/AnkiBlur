@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=AnkiBlur
+Comment=Anki with transparency and blur effects for modern interfaces
+GenericName=Flashcards
+Exec=ankiblur %f
+TryExec=ankiblur
+Icon=ankiblur
+Categories=Education;Languages;KDE;Qt;
+Terminal=false
+Type=Application
+Version=1.0
+MimeType=application/x-apkg;application/x-anki;application/x-ankiaddon;
+#should be removed eventually as it was upstreamed as to be an XDG specification called SingleMainWindow
+X-GNOME-SingleWindow=true
+SingleMainWindow=true
+StartupWMClass=ankiblur

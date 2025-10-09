@@ -59,104 +59,44 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/check_existing_releases.sh
 
-  build:
+  build-launcher:
     needs: check
     if: needs.check.outputs.SHOULD_BUILD == 'yes' || github.event.inputs.generate_assets == 'true'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-            artifact_name: linux-x64
-          - os: ubuntu-24.04-arm
-            platform: linux
-            arch: arm64
-            artifact_name: linux-arm64
-          - os: windows-latest
-            platform: windows
-            arch: x64
-            artifact_name: windows-x64
-          - os: macos-latest
-            platform: macos
-            arch: x64
-            artifact_name: macos-x64
-          - os: macos-latest
-            platform: macos
-            arch: arm64
-            artifact_name: macos-arm64
-
+    runs-on: ubuntu-latest
     env:
       ANKI_VERSION: ${{ needs.check.outputs.ANKI_VERSION }}
       ANKI_COMMIT: ${{ needs.check.outputs.ANKI_COMMIT }}
       BLUR_VERSION: ${{ needs.check.outputs.BLUR_VERSION }}
       SHOULD_DEPLOY: ${{ needs.check.outputs.SHOULD_DEPLOY }}
-      PLATFORM: ${{ matrix.platform }}
-      ARCH: ${{ matrix.arch }}
-      SKIP_PATCHES: true
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Setup Rust
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'linux' && matrix.arch == 'arm64' && 'aarch64-unknown-linux-gnu' || '' }}
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
 
-      - name: Install platform dependencies (Linux)
-        if: matrix.platform == 'linux'
+      - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bash grep findutils curl gcc g++ make git rsync \
-            build-essential libssl-dev pkg-config ninja-build \
-            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
-            mpv lame
+          sudo apt-get install -y gcc-aarch64-linux-gnu zstd
 
-      - name: Install platform dependencies (Windows)
-        if: matrix.platform == 'windows'
-        run: |
-          choco install -y protoc nsis
+      - name: Build universal AnkiBlur launcher
+        run: ./scripts/build_launcher.sh
 
-      - name: Install platform dependencies (macOS)
-        if: matrix.platform == 'macos'
-        run: |
-          brew install protobuf
-
-      - name: Download Anki source
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/get_anki.sh
-
-      - name: Apply patches
-        run: ./scripts/apply_patches.sh
-
-      - name: Build AnkiBlur
-        run: ./scripts/build.sh
-
-      - name: Package AnkiBlur
-        run: ./scripts/package.sh
+      - name: Create AnkiBlur package definitions
+        run: ./scripts/create_ankiblur_packages.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ankiblur-${{ matrix.artifact_name }}
-          path: dist/
+          name: ankiblur-universal-launcher
+          path: out/launcher/
           retention-days: ${{ needs.check.outputs.SHOULD_DEPLOY == 'yes' && 30 || 7 }}
 
   release:
-    needs: [check, build]
+    needs: [check, build-launcher]
     if: needs.check.outputs.SHOULD_DEPLOY == 'yes'
     runs-on: ubuntu-latest
     env:

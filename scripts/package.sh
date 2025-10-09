@@ -108,8 +108,8 @@ if [[ ! -d "$VENV_DIR" ]]; then
     echo "Setting up AnkiBlur environment..."
     python3 -m venv "$VENV_DIR"
 
-    # Install wheel files
-    "$VENV_DIR/bin/pip" install --no-deps "$SCRIPT_DIR"/*.whl
+    # Install wheel files with dependencies
+    "$VENV_DIR/bin/pip" install "$SCRIPT_DIR"/*.whl
 fi
 
 # Set library path for bundled libraries
