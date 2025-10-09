@@ -29,10 +29,8 @@ version = "$BLUR_VERSION"
 description = "AnkiBlur - Anki with transparency and blur effects"
 requires-python = ">=3.9"
 dependencies = [
-  "anki-release==$ANKI_VERSION",
-  "anki==$ANKI_VERSION",
-  "aqt==$ANKI_VERSION",
-  # Additional dependencies will be resolved by uv
+  # AnkiBlur launcher manages Anki installation dynamically
+  # No need to pin specific Anki versions as dependencies
 ]
 
 [build-system]
