@@ -3,7 +3,22 @@
     "anki_version": "v23.12.1",
     "anki_commit": "example_commit_hash",
     "build_date": "2024-01-15T10:30:00Z",
-    "patches_applied": ["branding", "transparency", "version"],
+    "patches_applied": [
+      "branding",
+      "transparency",
+      "version"
+    ],
     "release_notes": "Initial AnkiBlur release based on Anki 23.12.1"
+  },
+  "25.09.2.1": {
+    "anki_version": "25.09.2",
+    "anki_commit": "",
+    "build_date": "2025-10-09T03:19:22Z",
+    "patches_applied": [
+      "branding",
+      "transparency",
+      "version"
+    ],
+    "release_notes": "AnkiBlur 25.09.2.1 based on Anki 25.09.2 with transparency and blur effects"
   }
 }
