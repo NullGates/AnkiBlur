@@ -105,8 +105,14 @@ build_anki_wheels() {
     if [[ "$ARCH" == "aarch64" && "$PLATFORM" == "linux" ]]; then
         echo "Setting up ARM64 build environment..."
         export RUSTFLAGS="-C target-cpu=native"
-        # Increase memory limits for ARM64 builds
-        export CARGO_BUILD_JOBS=$(nproc)
+        # Limit parallel jobs to avoid memory issues on ARM64
+        export CARGO_BUILD_JOBS=2
+        echo "ARM64: Using CARGO_BUILD_JOBS=2 to prevent memory exhaustion"
+
+        # Check available memory
+        echo "Available memory:"
+        free -h
+        echo "CPU cores available: $(nproc)"
     fi
 
     # Run Anki's build system to create wheels with verbose output
@@ -118,12 +124,27 @@ build_anki_wheels() {
     echo "  ARCH=$ARCH"
 
     # Run with more verbose output to see what's failing
-    RUST_BACKTRACE=1 ./ninja wheels
+    echo "Starting ninja build with verbose output..."
+    if ! RUST_BACKTRACE=1 ./ninja -v wheels; then
+        echo "Wheels build failed, showing build directory contents for debugging:"
+        find "$ROOT_DIR" -name "*.log" -o -name "*.err" | head -10 | while read -r logfile; do
+            echo "=== Contents of $logfile ==="
+            tail -50 "$logfile" || true
+            echo "=========================="
+        done
+
+        echo "Build output directory contents:"
+        ls -la "$ROOT_DIR/build_out/" || true
+
+        exit 1
+    fi
 
     # Verify wheels were created
     local wheels_dir="$ROOT_DIR/build_out/wheels"
     if [[ ! -d "$wheels_dir" ]] || [[ -z "$(ls -A "$wheels_dir" 2>/dev/null)" ]]; then
         echo "Error: No wheels found after build"
+        echo "Checking for any .whl files in build directory:"
+        find "$ROOT_DIR" -name "*.whl" | head -10
         exit 1
     fi
 
