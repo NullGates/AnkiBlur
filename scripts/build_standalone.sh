@@ -145,7 +145,7 @@ create_standalone_executable() {
         --collect-all=aqt \
         --collect-all=anki \
         --python-option=-O \
-        -c "import aqt; aqt.run()"
+        -m aqt
 
     # Move executable to final location
     local exe_name="$app_name"
