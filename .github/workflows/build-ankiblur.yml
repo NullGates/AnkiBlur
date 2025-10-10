@@ -64,7 +64,7 @@ jobs:
             platform: linux
             arch: x86_64
             output_name: ankiblur
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             platform: linux
             arch: aarch64
             output_name: ankiblur
