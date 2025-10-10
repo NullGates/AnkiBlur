@@ -133,6 +133,16 @@ create_standalone_executable() {
     local app_name="ankiblur"
     echo "Creating $app_name executable..."
 
+    # Create entry point script for PyInstaller
+    cat > ankiblur_main.py << 'EOF'
+#!/usr/bin/env python3
+"""AnkiBlur entry point for PyInstaller."""
+import aqt
+
+if __name__ == "__main__":
+    aqt.run()
+EOF
+
     pyinstaller \
         --name "$app_name" \
         --onefile \
@@ -145,7 +155,7 @@ create_standalone_executable() {
         --collect-all=aqt \
         --collect-all=anki \
         --python-option=-O \
-        -m aqt
+        ankiblur_main.py
 
     # Move executable to final location
     local exe_name="$app_name"
@@ -165,7 +175,7 @@ create_standalone_executable() {
 
     # Clean up
     deactivate
-    rm -rf "$venv_dir" build/ "$app_name.spec"
+    rm -rf "$venv_dir" build/ "$app_name.spec" ankiblur_main.py
 }
 
 # Function to create platform packages
