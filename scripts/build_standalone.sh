@@ -163,8 +163,8 @@ build_anki_wheels() {
         # Try a workaround: build prerequisites first, then wheels
         echo "Attempting workaround: building prerequisites step by step..."
         echo "Building Python library first..."
-        if ./ninja pylib/anki; then
-            echo "pylib/anki built successfully, now trying wheels again..."
+        if ./ninja pylib_anki; then
+            echo "pylib_anki built successfully, now trying wheels again..."
             if ./ninja wheels; then
                 echo "Wheels built successfully on second attempt!"
                 return 0
