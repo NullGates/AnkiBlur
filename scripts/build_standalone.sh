@@ -166,7 +166,9 @@ EOF
     esac
 
     if [[ -f "dist/$exe_name" ]]; then
-        mv "dist/$exe_name" "$OUTPUT_DIR/"
+        if [[ "$(realpath "dist/$exe_name")" != "$(realpath "$OUTPUT_DIR/$exe_name")" ]]; then
+            mv "dist/$exe_name" "$OUTPUT_DIR/"
+        fi
         echo "Standalone executable created: $OUTPUT_DIR/$exe_name"
     else
         echo "Error: Executable not found after PyInstaller build"
