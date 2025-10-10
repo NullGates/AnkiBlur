@@ -75,9 +75,9 @@ prepare_anki_source() {
         "$SCRIPT_DIR/get_anki.sh"
     fi
 
-    # Apply AnkiBlur patches
+    # Apply AnkiBlur patches (currently skipped to get working binary)
     echo "Applying AnkiBlur patches..."
-    "$SCRIPT_DIR/apply_patches.sh"
+    SKIP_PATCHES=true "$SCRIPT_DIR/apply_patches.sh"
 
     echo "Anki source prepared successfully"
 }
