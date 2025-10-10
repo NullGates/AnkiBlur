@@ -49,7 +49,13 @@ setup_build_dependencies() {
                 sudo apt-get install -y \
                     libc6-dev \
                     protobuf-compiler \
-                    libprotobuf-dev
+                    libprotobuf-dev \
+                    python3-wheel \
+                    python3-setuptools \
+                    python3-pip-whl
+
+                # Ensure wheel module is available
+                python3 -m pip install --upgrade pip wheel setuptools
             fi
             ;;
         "darwin")
@@ -127,14 +133,32 @@ build_anki_wheels() {
     echo "Starting ninja build with verbose output..."
     if ! RUST_BACKTRACE=1 ./ninja -v wheels; then
         echo "Wheels build failed, showing build directory contents for debugging:"
+
+        # Check ninja log for details
+        if [[ -f "$ROOT_DIR/build_out/.ninja_log" ]]; then
+            echo "=== Last 20 lines of .ninja_log ==="
+            tail -20 "$ROOT_DIR/build_out/.ninja_log"
+            echo "=========================="
+        fi
+
+        # Look for Python-related logs
         find "$ROOT_DIR" -name "*.log" -o -name "*.err" | head -10 | while read -r logfile; do
             echo "=== Contents of $logfile ==="
             tail -50 "$logfile" || true
             echo "=========================="
         done
 
+        # Check if Python wheel building failed
+        echo "Checking Python environment and wheel building capabilities:"
+        python3 --version
+        python3 -m pip --version
+        python3 -c "import wheel; print('wheel module available')" 2>/dev/null || echo "wheel module not available"
+
         echo "Build output directory contents:"
         ls -la "$ROOT_DIR/build_out/" || true
+
+        echo "Checking for any wheel building attempts:"
+        find "$ROOT_DIR/build_out" -name "*wheel*" -o -name "*whl*" -o -name "*pyproject*" | head -10
 
         exit 1
     fi
