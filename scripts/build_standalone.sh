@@ -42,6 +42,16 @@ setup_build_dependencies() {
                 curl \
                 pkg-config \
                 libssl-dev
+
+            # Additional dependencies for ARM64 builds
+            if [[ "$ARCH" == "aarch64" ]]; then
+                echo "Installing additional ARM64 build dependencies..."
+                sudo apt-get install -y \
+                    gcc-multilib \
+                    libc6-dev \
+                    protobuf-compiler \
+                    libprotobuf-dev
+            fi
             ;;
         "darwin")
             # macOS dependencies (assume Homebrew)
@@ -92,9 +102,24 @@ build_anki_wheels() {
     export CARGO_TARGET_DIR="$ROOT_DIR/target"
     export BUILD_ROOT="$ROOT_DIR/build_out"
 
-    # Run Anki's build system to create wheels
+    # ARM64-specific environment setup
+    if [[ "$ARCH" == "aarch64" && "$PLATFORM" == "linux" ]]; then
+        echo "Setting up ARM64 build environment..."
+        export RUSTFLAGS="-C target-cpu=native"
+        # Increase memory limits for ARM64 builds
+        export CARGO_BUILD_JOBS=$(nproc)
+    fi
+
+    # Run Anki's build system to create wheels with verbose output
     echo "Running ./ninja wheels..."
-    ./ninja wheels
+    echo "Build environment:"
+    echo "  CARGO_TARGET_DIR=$CARGO_TARGET_DIR"
+    echo "  BUILD_ROOT=$BUILD_ROOT"
+    echo "  PLATFORM=$PLATFORM"
+    echo "  ARCH=$ARCH"
+
+    # Run with more verbose output to see what's failing
+    RUST_BACKTRACE=1 ./ninja wheels
 
     # Verify wheels were created
     local wheels_dir="$ROOT_DIR/build_out/wheels"
