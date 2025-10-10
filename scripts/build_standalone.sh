@@ -47,7 +47,6 @@ setup_build_dependencies() {
             if [[ "$ARCH" == "aarch64" ]]; then
                 echo "Installing additional ARM64 build dependencies..."
                 sudo apt-get install -y \
-                    gcc-multilib \
                     libc6-dev \
                     protobuf-compiler \
                     libprotobuf-dev
