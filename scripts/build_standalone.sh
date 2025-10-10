@@ -131,7 +131,7 @@ build_anki_wheels() {
 
     # Run with more verbose output to see what's failing
     echo "Starting ninja build with verbose output..."
-    if ! RUST_BACKTRACE=1 ./ninja -v wheels; then
+    if ! RUST_BACKTRACE=1 ./ninja -v wheels 2>&1; then
         echo "Wheels build failed, showing build directory contents for debugging:"
 
         # Check ninja log for details
@@ -159,6 +159,17 @@ build_anki_wheels() {
 
         echo "Checking for any wheel building attempts:"
         find "$ROOT_DIR/build_out" -name "*wheel*" -o -name "*whl*" -o -name "*pyproject*" | head -10
+
+        # Try a workaround: build prerequisites first, then wheels
+        echo "Attempting workaround: building prerequisites step by step..."
+        echo "Building Python library first..."
+        if ./ninja pylib/anki; then
+            echo "pylib/anki built successfully, now trying wheels again..."
+            if ./ninja wheels; then
+                echo "Wheels built successfully on second attempt!"
+                return 0
+            fi
+        fi
 
         exit 1
     fi
