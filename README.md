@@ -11,16 +11,7 @@ This repo takes the official [Anki](https://github.com/ankitects/anki) and appli
 | <img width="400" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| ![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) | Native blur support (Windows 8+) |
 
 
-<div style="display: flex; align-items: center; border-left: 4px solid #ffffffff; padding: 0.5em 1em; background-color: #2e2e2e70; border-radius: 4px; margin: 8px 0;">
-
-<img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">
-  <div>
-    <strong>Note:</strong> Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
-  </div>
-</div>
-
-><img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">
-><strong>Note:</strong> Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
+><img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;"> <strong>Note:</strong> Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
 
 
 
