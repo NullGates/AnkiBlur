@@ -1,6 +1,6 @@
 # AnkiBlur
 
-This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
+This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top to achieve a window blur effect. This repo Automatically tracks and builds on each new Anki release.
 
 ## Downloads
 
@@ -12,9 +12,7 @@ This repo takes the official [Anki](https://github.com/ankitects/anki) and appli
 
 
 [comment]: <> (<img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">) 
-><strong>Note:</strong> Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
-
-
+><strong>Note:</strong> AnkiBlur makes the window transparent and nudges your OS to draw blur. Only your operating system knows what's behind the window (like your wallpaper or other apps) and can apply the blur effect to that background content. If you only see transparency without blur, im sorry :/
 
 
 
