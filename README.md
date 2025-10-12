@@ -1,32 +1,192 @@
 # AnkiBlur
 
-This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
+This repo takes the official @ankitects/anki [Anki](https://github.com/ankitects/anki) and applies patches on top for window blur effect. Automatically tracks and builds on each new Anki releases.
 
 ## Downloads
 
-| Platform | Download (latest) | Transparency Support |
-|----------|-----------|---------------------|
-| <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Apple</title><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg> | [AppImage](../../releases/latest/download/AnkiBlur-latest-x86_64.AppImage) • [.deb](../../releases/latest) | Requires compositor (KWin, Mutter, etc.) |
-| <svg role="img" viewBox="0 0 10 11" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><title>Windows</title><g transform="matrix(.947 0 0 .949 -.19 .354)"><path fill="white" d="m10.7 5.95v4.85l-5.57-0.87v-3.99z"/><path fill="white" d="m5.13 1.13 5.57-0.804v4.774h-5.57z"/><path fill="white" d="m4.39 5.91v3.95l-4.126-0.57v-3.4z"/><path fill="white" d="m0.261 1.77 4.129-0.57v3.95h-4.127z"/></g></svg> Windows | [.exe](../../releases/latest) | Native blur support (Windows 8+) |
-| <svg role="img" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><title>Apple</title><path fill="white" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg> macOS | [.dmg](../../releases/latest) | Native blur support |
-
-> **Note**: Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
-
-## Features
-
-- **Window Transparency**: Semi-transparent windows with compositor-dependent blur
-- **Full Compatibility**: Works with existing Anki decks and add-ons
-- **Automated Builds**: Daily checks for new Anki releases
+| Platform | Supported Architecture | Download Latest | Transparency Support |
+|----------|-----------|---------|---------------------|
+| ![Linux](https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e) | ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | ![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) ![download_Flatpack](https://custom-icon-badges.demolab.com/badge/Download%20-Flatpack-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) ![download_Deb](https://custom-icon-badges.demolab.com/badge/Download%20-.Deb-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) | Requires compositor (Hyprland, Sway, KWin, Mutter, etc.) |
+| ![Apple](https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e) | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon_arm64](https://custom-icon-badges.demolab.com/badge/%20-apple%20silicon%20arm64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | ![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)| Native blur support |
+| ![Windows](https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e) | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | ![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) | Native blur support (Windows 8+) |
 
 
-## Manual Build
+<div style="display: flex; align-items: center; border-left: 4px solid #ffffffff; padding: 0.5em 1em; background-color: #2e2e2e70; border-radius: 4px; margin: 8px 0;">
 
+<img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">
+  <div>
+    <strong>Note:</strong> Visual blur effects depend on your system's compositor. Without compositor support, you'll see transparency without blur.
+  </div>
+</div>
+
+
+
+
+## Screenshot
+
+[screenshot to be added]
+
+## Installation
+
+### Linux
+
+#### Option 1: AppImage (Recommended)
 ```bash
-export ANKI_VERSION="v23.12.1"
-export BLUR_VERSION="23.12.1.1"
+# Download the AppImage
+wget https://github.com/your-repo/ankiblur/releases/latest/download/ankiblur-linux-x86_64.AppImage
 
-./scripts/get_anki.sh && ./scripts/apply_patches.sh && ./scripts/build.sh
+# Make it executable
+chmod +x ankiblur-linux-x86_64.AppImage
+
+# Run directly
+./ankiblur-linux-x86_64.AppImage
+
+# Optional: Integrate with system
+./ankiblur-linux-x86_64.AppImage --appimage-extract
+sudo mv squashfs-root /opt/ankiblur
+sudo ln -s /opt/ankiblur/AppRun /usr/local/bin/ankiblur
 ```
+
+#### Option 2: Debian Package (.deb)
+```bash
+# Download and install
+wget https://github.com/your-repo/ankiblur/releases/latest/download/ankiblur-linux-x86_64.deb
+sudo apt install ./ankiblur-linux-x86_64.deb
+
+# Or with dpkg
+sudo dpkg -i ankiblur-linux-x86_64.deb
+sudo apt install -f  # Fix dependencies if needed
+```
+
+#### Option 3: Flatpak
+```bash
+# Install from Flathub (coming soon)
+flatpak install flathub net.ankiblur.AnkiBlur
+
+# Run
+flatpak run net.ankiblur.AnkiBlur
+```
+
+#### Option 4: NixOS
+```bash
+# Using nix run (requires flakes)
+nix run github:your-repo/ankiblur
+
+# Or build locally
+nix-build ankiblur-patchelf.nix
+./result/bin/ankiblur
+```
+
+### macOS
+
+#### Download and Install
+```bash
+# Download DMG
+wget https://github.com/your-repo/ankiblur/releases/latest/download/ankiblur-macos-universal.dmg
+
+# Mount and install
+open ankiblur-macos-universal.dmg
+# Drag AnkiBlur.app to Applications folder
+```
+
+#### Command Line (Homebrew - coming soon)
+```bash
+brew install --cask ankiblur
+```
+
+### Windows
+
+#### Option 1: Installer (Recommended)
+1. Download `ankiblur-windows-x64.exe` from [releases](https://github.com/your-repo/ankiblur/releases/latest)
+2. Run the installer as Administrator
+3. Follow installation wizard
+4. Launch from Start Menu or Desktop shortcut
+
+#### Option 2: Portable
+1. Download `ankiblur-windows-x64-portable.zip`
+2. Extract to desired folder
+3. Run `ankiblur.exe` directly
+
+#### Option 3: Package Managers
+```powershell
+# Chocolatey (coming soon)
+choco install ankiblur
+
+# Winget (coming soon)
+winget install AnkiBlur
+```
+
+## FAQ
+
+### General Questions
+
+**Q: What's the difference between AnkiBlur and regular Anki?**
+A: AnkiBlur is identical to Anki but with window transparency and blur effects. All Anki features work exactly the same.
+
+**Q: Will my existing Anki data work with AnkiBlur?**
+A: Yes! AnkiBlur uses the same data format and profile system as Anki. Your cards, decks, and settings are fully compatible.
+
+**Q: Can I run both Anki and AnkiBlur on the same system?**
+A: Yes, they can coexist. They use separate profile directories by default.
+
+**Q: How do I sync my data between devices?**
+A: Use AnkiWeb sync exactly like regular Anki. Your AnkiWeb account works with both.
+
+### Installation Issues
+
+**Q: The blur effect isn't working on Linux**
+A: Blur effects require a compositor. Install one of these:
+- **Wayland**: Sway, Hyprland, or GNOME (Mutter)
+- **X11**: KWin (KDE), Compiz, or Picom
+
+**Q: Getting "libEGL.so.1 not found" error on NixOS**
+A: Use the NixOS-specific installation method or run with `nixGL`.
+
+**Q: AppImage won't run - "Permission denied"**
+A: Make it executable: `chmod +x ankiblur-*.AppImage`
+
+**Q: macOS says "AnkiBlur.app is damaged"**
+A: Right-click the app, select "Open", then click "Open" in the security dialog.
+
+**Q: Windows Defender blocks the installer**
+A: This is a false positive. Click "More info" → "Run anyway" or temporarily disable real-time protection.
+
+### Performance & Features
+
+**Q: Does AnkiBlur affect performance?**
+A: Minimal impact. The blur effect uses hardware acceleration when available.
+
+**Q: Can I adjust the transparency level?**
+A: Currently fixed at 95% opacity. Customization options coming in future versions.
+
+**Q: Does AnkiBlur support add-ons?**
+A: Yes! All Anki add-ons are fully compatible.
+
+**Q: How do I update AnkiBlur?**
+A: Download and install the latest version. Your data and settings are preserved.
+
+### Troubleshooting
+
+**Q: AnkiBlur crashes on startup**
+A: Try these solutions:
+1. Update your graphics drivers
+2. Disable hardware acceleration: `ankiblur --disable-gpu`
+3. Reset preferences: Delete `~/.local/share/ankiblur/prefs21.db`
+
+**Q: Sync isn't working**
+A: Check your internet connection and AnkiWeb credentials. Sync works identically to regular Anki.
+
+**Q: Getting "Qt platform plugin" errors**
+A: Install required Qt libraries:
+- **Ubuntu/Debian**: `sudo apt install qt6-base-dev`
+- **Fedora**: `sudo dnf install qt6-qtbase-devel`
+
+**Q: How do I completely uninstall AnkiBlur?**
+A:
+- **Linux**: `sudo apt remove ankiblur` or delete AppImage
+- **macOS**: Drag AnkiBlur.app to Trash
+- **Windows**: Use "Add/Remove Programs" or run uninstaller
+- **Data**: Delete `~/.local/share/ankiblur/` (Linux) or equivalent on other platforms
 
 ## How It Works
 
