@@ -205,14 +205,30 @@ jobs:
       shell: bash
       run: |
         mkdir -p artifacts
-        chmod +x scripts/package-artifacts.sh
-        ./scripts/package-artifacts.sh anki-source macos ${{ env.ANKI_VERSION }}
+        # Copy the DMG we created
+        if [ -f "anki-source/out/launcher/anki-launcher-mac.dmg" ]; then
+          cp anki-source/out/launcher/anki-launcher-mac.dmg artifacts/
+          echo "DMG copied to artifacts"
+        else
+          echo "Error: DMG not found"
+          echo "Contents of anki-source/out/launcher:"
+          ls -la anki-source/out/launcher/ || echo "Directory not found"
+          exit 1
+        fi
 
     - name: Generate Checksums
       shell: bash
       run: |
         cd artifacts
-        shasum -a 256 anki-launcher-mac.dmg > anki-launcher-mac.dmg.sha256
+        if [ -f "anki-launcher-mac.dmg" ]; then
+          shasum -a 256 anki-launcher-mac.dmg > anki-launcher-mac.dmg.sha256
+          echo "Checksum generated:"
+          cat anki-launcher-mac.dmg.sha256
+        else
+          echo "Error: DMG not found in artifacts"
+          ls -la
+          exit 1
+        fi
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4

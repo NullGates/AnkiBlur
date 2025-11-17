@@ -132,10 +132,35 @@ jobs:
           find /c -name "makensis.exe" 2>/dev/null | head -5
         fi
 
-        # Debug: Show environment
+        # CRITICAL: build_win.exe needs these files in specific locations
+        # 1. Create .version file at repository root (where build_win.exe expects it)
+        echo "Creating .version file at repository root..."
+        echo "${{ env.ANKI_VERSION }}" > .version
+        echo "Version file created with content: $(cat .version)"
+
+        # 2. Verify anki.template.nsi exists
+        if [ ! -f "qt/launcher/win/anki.template.nsi" ]; then
+          echo "Error: anki.template.nsi not found!"
+          echo "Contents of qt/launcher/win/:"
+          ls -la qt/launcher/win/
+          exit 1
+        else
+          echo "Found anki.template.nsi"
+        fi
+
+        # 3. Check for other required files
+        echo "Checking for required Windows files..."
+        for file in "qt/launcher/win/anki-icon.ico" "qt/launcher/win/fileassoc.nsh" "qt/launcher/win/anki.exe.manifest" "qt/launcher/win/anki-manifest.rc"; do
+          if [ -f "$file" ]; then
+            echo "  ✓ Found: $file"
+          else
+            echo "  ✗ Missing: $file"
+          fi
+        done
+
+        # Debug: Show current structure
         echo "Current directory: $(pwd)"
-        echo "Build script: qt/launcher/win/build.bat"
-        echo "PATH: $PATH"
+        echo "Build script location: qt/launcher/win/build.bat"
 
         # Run the Windows build script
         echo "Running build script..."
