@@ -1,0 +1,195 @@
+name: Build macOS Launcher
+
+on:
+  workflow_dispatch:
+    inputs:
+      anki_version:
+        description: 'Anki version to build (e.g., 25.09)'
+        required: true
+        default: '25.09'
+        type: string
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout AnkiBlur Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: aarch64-apple-darwin x86_64-apple-darwin
+
+    - name: Install macOS Dependencies
+      run: |
+        brew install zstd
+
+    - name: Download Anki Source
+      run: |
+        git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
+
+    - name: Validate and Apply Patches
+      shell: bash
+      run: |
+        chmod +x scripts/validate-and-apply-patches.sh
+        ./scripts/validate-and-apply-patches.sh anki-source
+
+    - name: Setup Build Environment
+      shell: bash
+      working-directory: anki-source
+      run: |
+        # Create version file
+        echo "${{ env.ANKI_VERSION }}" > .version
+
+        # Install UV for Python dependency management
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Extract UV binaries
+      working-directory: anki-source
+      run: |
+        # Create universal UV binary for macOS
+        mkdir -p out
+        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-apple-darwin.tar.gz -o uv-x86_64.tar.gz
+        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-apple-darwin.tar.gz -o uv-aarch64.tar.gz
+
+        tar -xzf uv-x86_64.tar.gz
+        tar -xzf uv-aarch64.tar.gz
+
+        lipo -create uv-x86_64-apple-darwin/uv uv-aarch64-apple-darwin/uv -output out/uv
+
+    - name: Patch macOS Build Script
+      shell: bash
+      working-directory: anki-source
+      run: |
+        # Replace the macOS build script to ensure proper paths
+        cat > qt/launcher/mac/build.sh << 'EOF'
+        #!/bin/bash
+        set -e
+
+        echo "Building macOS launcher..."
+
+        # Define output path
+        OUTPUT_DIR="../../../out/launcher"
+        APP_LAUNCHER="$OUTPUT_DIR/Anki.app"
+
+        # Build binaries for both architectures
+        echo "Building launcher for both architectures..."
+        rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+        # Set explicit target directory
+        export CARGO_TARGET_DIR="../../../target"
+
+        cargo build -p launcher --release --target aarch64-apple-darwin
+        cargo build -p launcher --release --target x86_64-apple-darwin
+
+        # Build UV universal binary
+        (cd ../../.. && ./ninja launcher:uv_universal)
+
+        # Ensure output directory exists
+        mkdir -p "$OUTPUT_DIR"
+
+        # Remove existing app launcher
+        rm -rf "$APP_LAUNCHER"
+
+        # Create app launcher structure
+        mkdir -p "$APP_LAUNCHER/Contents/MacOS" "$APP_LAUNCHER/Contents/Resources"
+
+        # Create universal binary
+        echo "Creating universal binary with lipo..."
+        lipo -create \
+            "$CARGO_TARGET_DIR/aarch64-apple-darwin/release/launcher" \
+            "$CARGO_TARGET_DIR/x86_64-apple-darwin/release/launcher" \
+            -output "$APP_LAUNCHER/Contents/MacOS/launcher"
+
+        # Copy UV
+        cp "$OUTPUT_DIR/uv" "$APP_LAUNCHER/Contents/MacOS/"
+
+        # Build install_name_tool stub
+        clang -arch arm64 -o "$OUTPUT_DIR/stub_arm64" stub.c
+        clang -arch x86_64 -o "$OUTPUT_DIR/stub_x86_64" stub.c
+        lipo -create "$OUTPUT_DIR/stub_arm64" "$OUTPUT_DIR/stub_x86_64" -output "$APP_LAUNCHER/Contents/MacOS/install_name_tool"
+        rm "$OUTPUT_DIR/stub_arm64" "$OUTPUT_DIR/stub_x86_64"
+
+        # Copy support files
+        ANKI_VERSION=$(cat ../../../.version | tr -d '\n')
+        sed "s/ANKI_VERSION/$ANKI_VERSION/g" Info.plist > "$APP_LAUNCHER/Contents/Info.plist"
+        cp icon/Assets.car "$APP_LAUNCHER/Contents/Resources/"
+        cp ../pyproject.toml "$APP_LAUNCHER/Contents/Resources/"
+        cp ../../../.python-version "$APP_LAUNCHER/Contents/Resources/"
+        cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
+
+        # Skip codesigning if NODMG is set
+        if [ -z "$NODMG" ]; then
+            echo "Skipping codesigning and DMG creation (NODMG=1)"
+        else
+            # Codesign/bundle
+            for i in "$APP_LAUNCHER/Contents/MacOS/uv" "$APP_LAUNCHER/Contents/MacOS/install_name_tool" "$APP_LAUNCHER/Contents/MacOS/launcher" "$APP_LAUNCHER"; do
+                codesign --force -vvvv -o runtime -s "Developer ID Application:" \
+                --entitlements entitlements.python.xml \
+                "$i"
+            done
+
+            # Check
+            codesign -vvv "$APP_LAUNCHER"
+            spctl -a "$APP_LAUNCHER"
+
+            # Notarize and build dmg
+            ./notarize.sh "$OUTPUT_DIR"
+            ./dmg/build.sh "$OUTPUT_DIR"
+        fi
+
+        echo "macOS build completed successfully!"
+        EOF
+        chmod +x qt/launcher/mac/build.sh
+
+    - name: Build Launcher
+      shell: bash
+      working-directory: anki-source
+      env:
+        MACOSX_DEPLOYMENT_TARGET: '10.15'
+        SDKROOT: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk'
+        CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER: 'clang'
+        CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER: 'clang'
+        NODMG: '1'  # Skip DMG creation in build script
+      run: |
+        echo "Building macOS launcher..."
+        cd qt/launcher/mac
+        ./build.sh
+
+    - name: Create DMG
+      working-directory: anki-source
+      run: |
+        # Create DMG without codesigning
+        cd qt/launcher/mac/dmg
+        chmod +x build.sh
+        ./build.sh ../../../out/launcher
+
+    - name: Package Artifacts
+      shell: bash
+      run: |
+        mkdir -p artifacts
+        chmod +x scripts/package-artifacts.sh
+        ./scripts/package-artifacts.sh anki-source macos ${{ env.ANKI_VERSION }}
+
+    - name: Generate Checksums
+      shell: bash
+      run: |
+        cd artifacts
+        shasum -a 256 anki-launcher-mac.dmg > anki-launcher-mac.dmg.sha256
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ankiblur-launcher-macos
+        path: artifacts/
+        retention-days: 30
