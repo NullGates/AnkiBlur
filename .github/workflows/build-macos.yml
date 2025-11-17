@@ -129,8 +129,8 @@ jobs:
         cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
 
         # Skip codesigning if NODMG is set
-        if [ -z "$NODMG" ]; then
-            echo "Skipping codesigning and DMG creation (NODMG=1)"
+        if [ -n "$NODMG" ]; then
+            echo "Skipping codesigning and DMG creation (NODMG is set)"
         else
             # Codesign/bundle
             for i in "$APP_LAUNCHER/Contents/MacOS/uv" "$APP_LAUNCHER/Contents/MacOS/install_name_tool" "$APP_LAUNCHER/Contents/MacOS/launcher" "$APP_LAUNCHER"; do

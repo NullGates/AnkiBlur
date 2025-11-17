@@ -86,9 +86,14 @@ jobs:
         # Patch the build_win.rs to use makensis from PATH
         if [ -f "qt/launcher/src/bin/build_win.rs" ]; then
           echo "Patching build_win.rs to use makensis from PATH..."
-          # Replace the hardcoded NSIS path with makensis.exe from PATH
-          sed -i 's|const NSIS_PATH: &str = "C:\\\\Program Files (x86)\\\\NSIS\\\\makensis.exe";|const NSIS_PATH: \&str = "makensis.exe";|' qt/launcher/src/bin/build_win.rs
-          echo "Patch applied successfully"
+          # Read the file, replace the NSIS path, and write it back
+          cp qt/launcher/src/bin/build_win.rs qt/launcher/src/bin/build_win.rs.bak
+          # Use a simpler approach: replace the specific line
+          cat qt/launcher/src/bin/build_win.rs.bak | \
+            sed 's/const NSIS_PATH: &str = "C:[^"]*makensis\.exe";/const NSIS_PATH: \&str = "makensis.exe";/' \
+            > qt/launcher/src/bin/build_win.rs
+          echo "Patch applied. Checking changes:"
+          grep "NSIS_PATH" qt/launcher/src/bin/build_win.rs
         fi
 
     - name: Build Launcher
@@ -101,16 +106,22 @@ jobs:
         export CODESIGN=0
         export NO_COMPRESS=1
 
-        # Verify NSIS installation
-        echo "Checking NSIS installation..."
-        if [ -f "/c/Program Files (x86)/NSIS/makensis.exe" ]; then
+        # Add NSIS to PATH
+        echo "Setting up NSIS in PATH..."
+        export PATH="/c/Program Files (x86)/NSIS:$PATH"
+
+        # Verify NSIS is accessible
+        echo "Verifying NSIS installation..."
+        if which makensis; then
+          echo "makensis found in PATH"
+          makensis //VERSION || echo "makensis version check failed"
+        elif [ -f "/c/Program Files (x86)/NSIS/makensis.exe" ]; then
           echo "NSIS found at: /c/Program Files (x86)/NSIS/makensis.exe"
-          export PATH="/c/Program Files (x86)/NSIS:$PATH"
-          echo "NSIS added to PATH"
+          /c/Program\ Files\ \(x86\)/NSIS/makensis.exe //VERSION || echo "Direct call failed"
         else
-          echo "ERROR: NSIS not found at expected location"
-          echo "Checking alternative locations..."
-          find /c -name "makensis.exe" 2>/dev/null | head -5 || echo "makensis.exe not found"
+          echo "WARNING: makensis not found in expected locations"
+          echo "Searching for makensis.exe..."
+          find /c -name "makensis.exe" 2>/dev/null | head -5
         fi
 
         # Debug: Show environment
