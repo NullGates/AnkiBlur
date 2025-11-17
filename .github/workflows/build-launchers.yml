@@ -22,9 +22,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: linux
-            os: ubuntu-latest
-            artifact_name: anki-launcher-linux.tar.zst
+          - platform: linux-x86_64
+            os: ubuntu-22.04
+            artifact_name: anki-launcher-linux-x86_64.tar.zst
+            build_script: qt/launcher/lin/build.sh
+
+          - platform: linux-arm64
+            os: ubuntu-22.04-arm
+            artifact_name: anki-launcher-linux-arm64.tar.zst
             build_script: qt/launcher/lin/build.sh
 
           - platform: macos
@@ -47,21 +52,19 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: |
-          x86_64-unknown-linux-gnu
-          aarch64-unknown-linux-gnu
-          x86_64-pc-windows-msvc
-          aarch64-apple-darwin
-          x86_64-apple-darwin
+          ${{ matrix.platform == 'linux-x86_64' && 'x86_64-unknown-linux-gnu' || '' }}
+          ${{ matrix.platform == 'linux-arm64' && 'aarch64-unknown-linux-gnu' || '' }}
+          ${{ matrix.platform == 'windows' && 'x86_64-pc-windows-msvc' || '' }}
+          ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin
+          x86_64-apple-darwin' || '' }}
 
     - name: Install Linux Dependencies
-      if: matrix.platform == 'linux'
+      if: startsWith(matrix.platform, 'linux')
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          gcc-aarch64-linux-gnu \
-          libc6-dev-arm64-cross \
-          libssl-dev:arm64 \
-          pkg-config-aarch64-linux-gnu \
+          libssl-dev \
+          pkg-config \
           zstd \
           tar \
           patch
@@ -104,20 +107,21 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
         fi
 
-    - name: Extract UV binaries (Linux)
-      if: matrix.platform == 'linux'
+    - name: Extract UV binaries (Linux x86_64)
+      if: matrix.platform == 'linux-x86_64'
       working-directory: anki-source
       run: |
-        # Extract UV binaries for both architectures
         mkdir -p out/extracted/uv
-        mkdir -p out/extracted/uv_lin_arm
-
-        # Download UV binaries for cross-compilation
         curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz -o uv-amd64.tar.gz
-        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-unknown-linux-gnu.tar.gz -o uv-arm64.tar.gz
-
         tar -xzf uv-amd64.tar.gz --strip-components=1 -C out/extracted/uv
-        tar -xzf uv-arm64.tar.gz --strip-components=1 -C out/extracted/uv_lin_arm
+
+    - name: Extract UV binaries (Linux ARM64)
+      if: matrix.platform == 'linux-arm64'
+      working-directory: anki-source
+      run: |
+        mkdir -p out/extracted/uv
+        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-unknown-linux-gnu.tar.gz -o uv-arm64.tar.gz
+        tar -xzf uv-arm64.tar.gz --strip-components=1 -C out/extracted/uv
 
     - name: Extract UV binaries (macOS)
       if: matrix.platform == 'macos'
@@ -146,14 +150,14 @@ jobs:
     - name: Build Launcher
       shell: bash
       working-directory: anki-source
-      env:
-        PKG_CONFIG_ALLOW_CROSS: 1
       run: |
         if [[ "${{ matrix.platform }}" == "windows" ]]; then
           # Set environment variables for Windows build
           export CODESIGN=0
           export NO_COMPRESS=1
-          cmd.exe //C ".\${{ matrix.build_script }}"
+          # Convert forward slashes to backslashes for Windows
+          WINDOWS_SCRIPT=$(echo "${{ matrix.build_script }}" | tr '/' '\')
+          cmd.exe //C ".\$WINDOWS_SCRIPT"
         else
           # Set NODMG=1 for macOS to skip DMG creation in build script
           if [[ "${{ matrix.platform }}" == "macos" ]]; then
