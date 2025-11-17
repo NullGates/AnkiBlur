@@ -10,8 +10,16 @@ on:
         type: string
   push:
     branches: [ main ]
+    paths:
+      - '.github/workflows/build-windows.yml'
+      - 'patches/**'
+      - 'scripts/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - '.github/workflows/build-windows.yml'
+      - 'patches/**'
+      - 'scripts/**'
 
 env:
   ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
