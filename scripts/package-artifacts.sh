@@ -267,16 +267,16 @@ include_patches_info() {
             echo ""
 
             # List all patch files with their purposes
-            echo "1. Branding Patches (patches/launcher_branding/):"
-            find "$ANKI_SOURCE/patches/launcher_branding" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
+            echo "1. Branding Patches (patches/01_launcher_branding/):"
+            find "$ANKI_SOURCE/patches/01_launcher_branding" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
             echo ""
 
-            echo "2. Core Anki Patches (patches/launcher_apply_anki_patches/):"
-            find "$ANKI_SOURCE/patches/launcher_apply_anki_patches" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
+            echo "2. Core Anki Patches (patches/02_launcher_apply_anki_patches/):"
+            find "$ANKI_SOURCE/patches/02_launcher_apply_anki_patches" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
             echo ""
 
-            echo "3. Addon Integration Patches (patches/launcher_apply_anki_addon/):"
-            find "$ANKI_SOURCE/patches/launcher_apply_anki_addon" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
+            echo "3. Addon Integration Patches (patches/03_launcher_apply_anki_addon/):"
+            find "$ANKI_SOURCE/patches/03_launcher_apply_anki_addon" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
             echo ""
 
             echo "The complete patches directory is included in this package"

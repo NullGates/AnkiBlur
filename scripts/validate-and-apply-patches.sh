@@ -71,9 +71,9 @@ log_info "AnkiBlur repository: $REPO_ROOT"
 
 # Define patch directories in application order
 PATCH_DIRS=(
-    "launcher_branding"
-    "launcher_apply_anki_patches"
-    "launcher_apply_anki_addon"
+    "01_launcher_branding"
+    "02_launcher_apply_anki_patches"
+    "03_launcher_apply_anki_addon"
 )
 
 # Function to validate patch can be applied

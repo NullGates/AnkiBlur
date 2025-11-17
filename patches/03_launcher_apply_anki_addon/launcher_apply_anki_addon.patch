@@ -1,0 +1,207 @@
+diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/qt/launcher/Cargo.toml v2_03_addon_from_02/qt/launcher/Cargo.toml
+--- cp_from_02/qt/launcher/Cargo.toml	2025-11-17 16:23:04.230680960 +0100
++++ v2_03_addon_from_02/qt/launcher/Cargo.toml	2025-11-17 16:20:47.887065275 +0100
+@@ -15,6 +15,8 @@
+ dirs.workspace = true
+ serde_json.workspace = true
+ diffy = "0.4"
++reqwest = { version = "0.11", features = ["blocking"] }
++zip = "0.6"
+ 
+ [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+ libc.workspace = true
+diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/qt/launcher/src/addon.rs v2_03_addon_from_02/qt/launcher/src/addon.rs
+--- cp_from_02/qt/launcher/src/addon.rs	1970-01-01 01:00:00.000000000 +0100
++++ v2_03_addon_from_02/qt/launcher/src/addon.rs	2025-11-17 16:32:45.071157959 +0100
+@@ -0,0 +1,166 @@
++use std::path::{Path, PathBuf};
++use std::io::Cursor;
++use anki_io::{write_file, create_dir_all, remove_dir_all};
++use anyhow::{Context, Result};
++use zip::ZipArchive;
++
++/// Install the AnkiBlur background theme addon from GitHub
++pub fn install_ankiblur_addon() -> Result<()> {
++    println!("Installing AnkiBlur background theme addon...");
++
++    // Get the addon installation directory
++    let addons_path = get_anki_addons21_path()?;
++    if !addons_path.exists() {
++        println!("Warning: Anki addons directory does not exist, skipping addon installation.");
++        return Ok(());
++    }
++
++    // Download the addon from GitHub
++    let addon_data = download_ankiblur_addon()?;
++
++    // Install the addon
++    install_addon_from_data(&addon_data, &addons_path)?;
++
++    println!("AnkiBlur background theme addon installed successfully.");
++    Ok(())
++}
++
++/// Download the AnkiBlur addon from GitHub
++fn download_ankiblur_addon() -> Result<Vec<u8>> {
++    let addon_url = "https://raw.githubusercontent.com/NullGates/AnkiBlur/main/addons/anki_webview_addon/ankiblur_background_theme.ankiaddon";
++
++    println!("Downloading addon from: {}", addon_url);
++
++    let response = reqwest::blocking::get(addon_url)
++        .context("Failed to download addon from GitHub")?;
++
++    if !response.status().is_success() {
++        return Err(anyhow::anyhow!(
++            "Failed to download addon: HTTP status {}",
++            response.status()
++        ));
++    }
++
++    let addon_data = response.bytes()
++        .context("Failed to read addon data from response")?;
++
++    println!("Successfully downloaded addon ({} bytes)", addon_data.len());
++    Ok(addon_data.to_vec())
++}
++
++/// Install addon from downloaded data
++fn install_addon_from_data(addon_data: &[u8], addons_path: &Path) -> Result<()> {
++    // Create a cursor from the addon data for ZIP reading
++    let cursor = Cursor::new(addon_data);
++    let mut archive = ZipArchive::new(cursor)
++        .context("Failed to open addon as ZIP archive")?;
++
++    // Extract addon directory name from the first file
++    let addon_dir_name = if archive.len() > 0 {
++        let first_file = archive.by_index(0)?;
++        let file_path = Path::new(first_file.name());
++
++        // Get the top-level directory name
++        if let Some(first_component) = file_path.components().next() {
++            first_component.as_os_str().to_string_lossy().to_string()
++        } else {
++            "ankiblur_background_theme".to_string()
++        }
++    } else {
++        return Err(anyhow::anyhow!("Addon archive is empty"));
++    };
++
++    let addon_install_path = addons_path.join(&addon_dir_name);
++
++    // Remove existing addon if it exists
++    if addon_install_path.exists() {
++        println!("Removing existing addon: {}", addon_install_path.display());
++        remove_dir_all(&addon_install_path)?;
++    }
++
++    // Create addon directory
++    create_dir_all(&addon_install_path)?;
++
++    // Extract all files
++    for i in 0..archive.len() {
++        let mut file = archive.by_index(i)?;
++        let file_path = Path::new(file.name());
++
++        // Skip the top-level directory in the path
++        let relative_path = if file_path.components().count() > 1 {
++            file_path.components().skip(1).collect::<PathBuf>()
++        } else {
++            continue; // Skip directory entries
++        };
++
++        let output_path = addon_install_path.join(&relative_path);
++
++        if file.name().ends_with('/') {
++            // Directory
++            create_dir_all(&output_path)?;
++        } else {
++            // File
++            if let Some(parent) = output_path.parent() {
++                create_dir_all(parent)?;
++            }
++
++            // Read file content
++            let mut file_content = Vec::new();
++            std::io::copy(&mut file, &mut file_content)?;
++
++            // Write file
++            write_file(&output_path, &file_content)?;
++
++            println!("Extracted: {}", relative_path.display());
++        }
++    }
++
++    println!("Addon installed to: {}", addon_install_path.display());
++    Ok(())
++}
++
++/// Get the Anki addons21 directory path
++fn get_anki_addons21_path() -> Result<PathBuf> {
++    let anki_base_path = get_anki_base_path()?;
++    Ok(anki_base_path.join("addons21"))
++}
++
++/// Get the Anki base directory path
++fn get_anki_base_path() -> Result<PathBuf> {
++    let anki_base_path = if cfg!(target_os = "windows") {
++        // Windows: %APPDATA%\Anki2
++        dirs::config_dir()
++            .context("Unable to determine config directory")?
++            .join("Anki2")
++    } else if cfg!(target_os = "macos") {
++        // macOS: ~/Library/Application Support/Anki2
++        dirs::data_dir()
++            .context("Unable to determine data directory")?
++            .join("Anki2")
++    } else {
++        // Linux: ~/.local/share/Anki2
++        dirs::data_dir()
++            .context("Unable to determine data directory")?
++            .join("Anki2")
++    };
++
++    Ok(anki_base_path)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_get_anki_base_path() {
++        let path = get_anki_base_path().unwrap();
++        assert!(path.to_string_lossy().contains("Anki2"));
++    }
++
++    #[test]
++    fn test_get_anki_addons21_path() {
++        let path = get_anki_addons21_path().unwrap();
++        assert!(path.to_string_lossy().contains("Anki2"));
++        assert!(path.to_string_lossy().contains("addons21"));
++    }
++}
+\ No newline at end of file
+diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/qt/launcher/src/main.rs v2_03_addon_from_02/qt/launcher/src/main.rs
+--- cp_from_02/qt/launcher/src/main.rs	2025-11-17 16:23:04.230264251 +0100
++++ v2_03_addon_from_02/qt/launcher/src/main.rs	2025-11-17 16:20:47.887302610 +0100
+@@ -30,6 +30,7 @@
+ 
+ mod platform;
+ mod patch;
++mod addon;
+ 
+ struct State {
+     current_version: Option<String>,
+@@ -356,6 +357,12 @@
+                 println!("Anki will continue without patches.");
+             }
+ 
++            // Install AnkiBlur addon from GitHub after patches
++            if let Err(e) = addon::install_ankiblur_addon() {
++                println!("Warning: Failed to install AnkiBlur addon: {e:#}");
++                println!("Anki will continue without the addon.");
++            }
++
+             Ok(())
+         }
+         Err(e) => {
