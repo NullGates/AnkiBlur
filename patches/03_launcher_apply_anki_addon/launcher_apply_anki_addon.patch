@@ -1,4 +1,4 @@
-diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/qt/launcher/Cargo.toml v2_03_addon_from_02/qt/launcher/Cargo.toml
+diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' cp_from_02/qt/launcher/Cargo.toml v2_03_addon_from_02/qt/launcher/Cargo.toml
 --- cp_from_02/qt/launcher/Cargo.toml	2025-11-17 16:23:04.230680960 +0100
 +++ v2_03_addon_from_02/qt/launcher/Cargo.toml	2025-11-17 16:20:47.887065275 +0100
 @@ -15,6 +15,8 @@
@@ -10,7 +10,7 @@ diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/q
  
  [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
  libc.workspace = true
-diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/qt/launcher/src/addon.rs v2_03_addon_from_02/qt/launcher/src/addon.rs
+diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' cp_from_02/qt/launcher/src/addon.rs v2_03_addon_from_02/qt/launcher/src/addon.rs
 --- cp_from_02/qt/launcher/src/addon.rs	1970-01-01 01:00:00.000000000 +0100
 +++ v2_03_addon_from_02/qt/launcher/src/addon.rs	2025-11-17 16:32:45.071157959 +0100
 @@ -0,0 +1,166 @@
@@ -181,7 +181,7 @@ diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/q
 +    }
 +}
 \ No newline at end of file
-diff -ruN '--exclude=target' '--exclude=out' '--exclude=Cargo.lock' cp_from_02/qt/launcher/src/main.rs v2_03_addon_from_02/qt/launcher/src/main.rs
+diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' cp_from_02/qt/launcher/src/main.rs v2_03_addon_from_02/qt/launcher/src/main.rs
 --- cp_from_02/qt/launcher/src/main.rs	2025-11-17 16:23:04.230264251 +0100
 +++ v2_03_addon_from_02/qt/launcher/src/main.rs	2025-11-17 16:20:47.887302610 +0100
 @@ -30,6 +30,7 @@
