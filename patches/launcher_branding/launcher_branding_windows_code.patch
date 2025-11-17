@@ -1,0 +1,29 @@
+--- original_anki_src_repo/qt/launcher/src/platform/windows.rs	2025-11-16 20:59:15.521804106 +0100
++++ v1_from_src_repo/qt/launcher/src/platform/windows.rs	2025-11-16 20:58:48.815234261 +0100
+@@ -158,7 +158,7 @@
+     }
+ 
+     // Fall back to default location
+-    let default_dir = dirs::data_local_dir()?.join("Programs").join("Anki");
++    let default_dir = dirs::data_local_dir()?.join("Programs").join("AnkiBlur");
+     let uninstaller = default_dir.join("uninstall.exe");
+     if uninstaller.exists() {
+         return Some(uninstaller);
+@@ -172,7 +172,7 @@
+         let mut hkey = HKEY::default();
+ 
+         // Convert the registry path to wide string
+-        let subkey = u16cstr!("SOFTWARE\\Anki");
++        let subkey = u16cstr!("SOFTWARE\\AnkiBlur");
+ 
+         // Open the registry key
+         let result = RegOpenKeyExW(
+@@ -236,7 +236,7 @@
+     // Set the App User Model ID for Windows taskbar grouping
+     unsafe {
+         let _ =
+-            SetCurrentProcessExplicitAppUserModelID(PCWSTR(u16cstr!("Ankitects.Anki").as_ptr()));
++            SetCurrentProcessExplicitAppUserModelID(PCWSTR(u16cstr!("Ankitects.AnkiBlur").as_ptr()));
+     }
+ 
+     attach_to_parent_console();

@@ -1,0 +1,115 @@
+--- original_anki_src_repo/qt/launcher/win/anki.template.nsi	2025-11-16 20:59:15.522102266 +0100
++++ v1_from_src_repo/qt/launcher/win/anki.template.nsi	2025-11-16 20:58:48.815459714 +0100
+@@ -19,7 +19,7 @@
+ !pragma warning disable 6020 ; don't complain about missing installer in second invocation
+ 
+ ; The name of the installer
+-Name "Anki"
++Name "AnkiBlur"
+ 
+ Unicode true
+ 
+@@ -30,10 +30,10 @@
+ RequestExecutionLevel user
+ 
+ ; The default installation directory
+-InstallDir "$LOCALAPPDATA\Programs\Anki"
++InstallDir "$LOCALAPPDATA\Programs\AnkiBlur"
+ 
+ ; Remember the install location
+-InstallDirRegKey HKCU "Software\Anki" "Install_Dir64"
++InstallDirRegKey HKCU "Software\AnkiBlur" "Install_Dir64"
+ 
+ AllowSkipFiles off
+ 
+@@ -56,7 +56,7 @@
+ 
+   ${nsProcess::FindProcess} "anki.exe" $R0
+   StrCmp $R0 0 0 notRunning
+-      MessageBox MB_OK|MB_ICONEXCLAMATION "Anki.exe is already running. Please close it, then run the installer again." /SD IDOK
++      MessageBox MB_OK|MB_ICONEXCLAMATION "AnkiBlur.exe is already running. Please close it, then run the installer again." /SD IDOK
+       Abort
+   notRunning:
+ FunctionEnd
+@@ -186,8 +186,8 @@
+ 
+   ; Set output path to the installation directory.
+   SetOutPath $INSTDIR
+-  CreateShortCut "$DESKTOP\Anki.lnk" "$INSTDIR\anki.exe" ""
+-  CreateShortCut "$SMPROGRAMS\Anki.lnk" "$INSTDIR\anki.exe" ""
++  CreateShortCut "$DESKTOP\AnkiBlur.lnk" "$INSTDIR\anki.exe" ""
++  CreateShortCut "$SMPROGRAMS\AnkiBlur.lnk" "$INSTDIR\anki.exe" ""
+ 
+   ; Add files to installer
+   !ifndef WRITE_UNINSTALLER
+@@ -195,30 +195,30 @@
+   !endif
+ 
+   !insertmacro APP_ASSOCIATE_HKCU "apkg" "anki.apkg" \
+-    "Anki deck package" "$INSTDIR\anki.exe,0" \
+-    "Open with Anki" "$INSTDIR\anki.exe $\"%L$\""
++    "AnkiBlur deck package" "$INSTDIR\anki.exe,0" \
++    "Open with AnkiBlur" "$INSTDIR\anki.exe $\"%L$\""
+   
+   !insertmacro APP_ASSOCIATE_HKCU "colpkg" "anki.colpkg" \
+-    "Anki collection package" "$INSTDIR\anki.exe,0" \
+-    "Open with Anki" "$INSTDIR\anki.exe $\"%L$\""
++    "AnkiBlur collection package" "$INSTDIR\anki.exe,0" \
++    "Open with AnkiBlur" "$INSTDIR\anki.exe $\"%L$\""
+ 
+   !insertmacro APP_ASSOCIATE_HKCU "ankiaddon" "anki.ankiaddon" \
+-    "Anki add-on" "$INSTDIR\anki.exe,0" \
+-    "Open with Anki" "$INSTDIR\anki.exe $\"%L$\""
++    "AnkiBlur add-on" "$INSTDIR\anki.exe,0" \
++    "Open with AnkiBlur" "$INSTDIR\anki.exe $\"%L$\""
+ 
+   !insertmacro UPDATEFILEASSOC
+ 
+   ; Write the installation path into the registry
+   ; WriteRegStr HKLM Software\Anki "Install_Dir64" "$INSTDIR"
+-  WriteRegStr HKCU Software\Anki "Install_Dir64" "$INSTDIR"
++  WriteRegStr HKCU Software\AnkiBlur "Install_Dir64" "$INSTDIR"
+ 
+   ; Write the uninstall keys for Windows
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki" "DisplayName" "Anki Launcher"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki" "DisplayVersion" "ANKI_VERSION"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki" "UninstallString" '"$INSTDIR\uninstall.exe"'
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
+-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki" "NoModify" 1
+-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki" "NoRepair" 1
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur" "DisplayName" "AnkiBlur Launcher"
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur" "DisplayVersion" "ANKI_VERSION"
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur" "UninstallString" '"$INSTDIR\uninstall.exe"'
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
++  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur" "NoModify" 1
++  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur" "NoRepair" 1
+ 
+   !ifdef WRITE_UNINSTALLER
+   WriteUninstaller "uninstall.exe"
+@@ -272,8 +272,8 @@
+   Call un.removeManifestFiles
+ 
+   ; Remove other shortcuts
+-  Delete "$DESKTOP\Anki.lnk"
+-  Delete "$SMPROGRAMS\Anki.lnk"
++  Delete "$DESKTOP\AnkiBlur.lnk"
++  Delete "$SMPROGRAMS\AnkiBlur.lnk"
+ 
+   ; associations
+   !insertmacro APP_UNASSOCIATE_HKCU "apkg" "anki.apkg"
+@@ -287,11 +287,11 @@
+   ; try to remove top level folder if empty
+   RMDir "$INSTDIR"
+ 
+-  ; Remove AnkiProgramData folder created during runtime
+-  RMDir /r "$LOCALAPPDATA\AnkiProgramFiles"
++  ; Remove AnkiBlurProgramData folder created during runtime
++  RMDir /r "$LOCALAPPDATA\AnkiBlurProgramFiles"
+ 
+   ; Remove registry keys
+-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Anki"
+-  DeleteRegKey HKCU Software\Anki
++  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AnkiBlur"
++  DeleteRegKey HKCU Software\AnkiBlur
+ 
+ SectionEnd

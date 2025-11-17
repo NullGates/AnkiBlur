@@ -1,0 +1,27 @@
+--- original_anki_src_repo/qt/launcher/src/platform/unix.rs	2025-11-16 20:59:15.521749565 +0100
++++ v1_from_src_repo/qt/launcher/src/platform/unix.rs	2025-11-16 20:58:48.815258343 +0100
+@@ -60,12 +60,12 @@
+     use std::io::stdout;
+     use std::io::Write;
+ 
+-    let uninstall_script = std::path::Path::new("/usr/local/share/anki/uninstall.sh");
++    let uninstall_script = std::path::Path::new("/usr/local/share/ankiblur/uninstall.sh");
+ 
+     if uninstall_script.exists() {
+-        println!("To finish uninstalling, run 'sudo /usr/local/share/anki/uninstall.sh'");
++        println!("To finish uninstalling, run 'sudo /usr/local/share/ankiblur/uninstall.sh'");
+     } else {
+-        println!("Anki has been uninstalled.");
++        println!("AnkiBlur has been uninstalled.");
+     }
+     println!("Press enter to quit.");
+     let _ = stdout().flush();
+@@ -98,7 +98,7 @@
+ 
+     let (major, minor) = get_glibc_version().unwrap_or_default();
+     if major < 2 || (major == 2 && minor < 36) {
+-        anyhow::bail!("Anki requires a modern Linux distro with glibc 2.36 or later.");
++        anyhow::bail!("AnkiBlur requires a modern Linux distro with glibc 2.36 or later.");
+     }
+ 
+     Ok(())

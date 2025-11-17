@@ -1,0 +1,82 @@
+--- original_anki_src_repo/qt/launcher/src/main.rs	2025-11-16 20:59:15.520599505 +0100
++++ v1_from_src_repo/qt/launcher/src/main.rs	2025-11-16 20:58:48.815379341 +0100
+@@ -95,7 +95,7 @@
+     } else {
+         dirs::data_local_dir()
+             .context("Unable to determine data_dir")?
+-            .join("AnkiProgramFiles")
++            .join("AnkiBlurProgramFiles")
+     };
+ 
+     let (exe_dir, resources_dir) = get_exe_and_resources_dirs()?;
+@@ -160,7 +160,7 @@
+     }
+ 
+     print!("\x1B[2J\x1B[H"); // Clear screen and move cursor to top
+-    println!("\x1B[1mAnki Launcher\x1B[0m\n");
++    println!("\x1B[1mAnkiBlur Launcher\x1B[0m\n");
+ 
+     ensure_os_supported()?;
+ 
+@@ -178,14 +178,14 @@
+     }
+ 
+     if cfg!(unix) && !cfg!(target_os = "macos") {
+-        println!("\nPress enter to start Anki.");
++        println!("\nPress enter to start AnkiBlur.");
+         let mut input = String::new();
+         let _ = stdin().read_line(&mut input);
+     } else {
+         // on Windows/macOS, the user needs to close the terminal/console
+         // currently, but ideas on how we can avoid this would be good!
+         println!();
+-        println!("Anki will start shortly.");
++        println!("AnkiBlur will start shortly.");
+         println!("\x1B[1mYou can close this window.\x1B[0m\n");
+     }
+ 
+@@ -233,7 +233,7 @@
+             state.current_version = Some(version);
+         }
+         None => {
+-            println!("Warning: Could not determine current Anki version");
++            println!("Warning: Could not determine current AnkiBlur version");
+         }
+     }
+ 
+@@ -258,7 +258,7 @@
+     // Remove sync marker before attempting sync
+     let _ = remove_file(&state.sync_complete_marker);
+ 
+-    println!("Updating Anki...\n");
++    println!("Updating AnkiBlur...\n");
+ 
+     let python_version_trimmed = if state.user_python_version_path.exists() {
+         let python_version = read_file(&state.user_python_version_path)?;
+@@ -440,7 +440,7 @@
+ 
+ fn get_main_menu_choice(state: &State) -> Result<MainMenuChoice> {
+     loop {
+-        println!("1) Latest Anki (press Enter)");
++        println!("1) Latest AnkiBlur (press Enter)");
+         println!("2) Choose a version");
+ 
+         if let Some(current_version) = &state.current_version {
+@@ -700,7 +700,7 @@
+     let output = match cmd.utf8_output() {
+         Ok(output) => output,
+         Err(e) => {
+-            print!("Unable to check for Anki versions. Please check your internet connection.\n\n");
++            print!("Unable to check for AnkiBlur versions. Please check your internet connection.\n\n");
+             return Err(e.into());
+         }
+     };
+@@ -997,7 +997,7 @@
+     };
+ 
+     let mut cmd = Command::new(&python_exe);
+-    cmd.args(["-c", "import aqt, sys; sys.argv[0] = 'Anki'; aqt.run()"]);
++    cmd.args(["-c", "import aqt, sys; sys.argv[0] = 'AnkiBlur'; aqt.run()"]);
+     cmd.args(args);
+     // tell the Python code it was invoked by the launcher, and updating is
+     // available

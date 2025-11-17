@@ -1,0 +1,15 @@
+--- original_anki_src_repo/qt/launcher/lin/anki.desktop	2025-11-16 20:59:15.518541589 +0100
++++ v1_from_src_repo/qt/launcher/lin/anki.desktop	2025-11-16 20:58:48.813697085 +0100
+@@ -1,5 +1,5 @@
+ [Desktop Entry]
+-Name=Anki
++Name=AnkiBlur
+ Comment=An intelligent spaced-repetition memory training program
+ GenericName=Flashcards
+ Exec=anki %f
+@@ -13,4 +13,4 @@
+ #should be removed eventually as it was upstreamed as to be an XDG specification called SingleMainWindow
+ X-GNOME-SingleWindow=true
+ SingleMainWindow=true
+-StartupWMClass=anki
++StartupWMClass=ankiblur

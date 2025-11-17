@@ -1,0 +1,10 @@
+{
+    "light_theme": {
+        "color": "#ffffff",
+        "alpha": 15
+    },
+    "dark_theme": {
+        "color": "#1a1a2e",
+        "alpha": 25
+    }
+}

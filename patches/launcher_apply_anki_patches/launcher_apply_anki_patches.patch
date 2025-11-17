@@ -1,0 +1,264 @@
+diff -ruN '--exclude=target' original/Cargo.lock v1_edit/Cargo.lock
+--- original/Cargo.lock	2025-11-16 20:09:05.972572066 +0100
++++ v1_edit/Cargo.lock	2025-11-16 20:09:48.228380577 +0100
+@@ -1815,6 +1815,15 @@
+ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
+ 
+ [[package]]
++name = "diffy"
++version = "0.4.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b545b8c50194bdd008283985ab0b31dba153cfd5b3066a92770634fbc0d7d291"
++dependencies = [
++ "nu-ansi-term",
++]
++
++[[package]]
+ name = "digest"
+ version = "0.10.7"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -3559,6 +3568,7 @@
+  "anki_process",
+  "anyhow",
+  "camino",
++ "diffy",
+  "dirs 6.0.0",
+  "embed-resource",
+  "libc",
+diff -ruN '--exclude=target' original/qt/launcher/Cargo.toml v1_edit/qt/launcher/Cargo.toml
+--- original/qt/launcher/Cargo.toml	2025-11-16 20:09:05.984661252 +0100
++++ v1_edit/qt/launcher/Cargo.toml	2025-11-16 20:09:48.237641983 +0100
+@@ -14,6 +14,7 @@
+ camino.workspace = true
+ dirs.workspace = true
+ serde_json.workspace = true
++diffy = "0.4"
+ 
+ [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+ libc.workspace = true
+diff -ruN '--exclude=target' original/qt/launcher/src/main.rs v1_edit/qt/launcher/src/main.rs
+--- original/qt/launcher/src/main.rs	2025-11-16 20:09:05.986107404 +0100
++++ v1_edit/qt/launcher/src/main.rs	2025-11-16 20:09:48.237400854 +0100
+@@ -29,6 +29,7 @@
+ use crate::platform::respawn_launcher;
+ 
+ mod platform;
++mod patch;
+ 
+ struct State {
+     current_version: Option<String>,
+@@ -349,6 +350,12 @@
+                 }
+             }
+ 
++            // Apply custom patches after successful installation
++            if let Err(e) = patch::apply_patches(&state.venv_folder) {
++                println!("Warning: Failed to apply patches: {e:#}");
++                println!("Anki will continue without patches.");
++            }
++
+             Ok(())
+         }
+         Err(e) => {
+diff -ruN '--exclude=target' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
+--- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
++++ v1_edit/qt/launcher/src/patch.rs	2025-11-16 20:09:48.237487605 +0100
+@@ -0,0 +1,197 @@
++use std::path::{Path, PathBuf};
++use anki_io::{read_file, write_file, copy_file};
++use anyhow::{Context, Result};
++use diffy::Patch;
++
++/// Apply patches to the installed Anki files
++pub fn apply_patches(venv_folder: &Path) -> Result<()> {
++    println!("Applying custom patches...");
++
++    let patches_dir = get_patches_directory()?;
++    if !patches_dir.exists() {
++        println!("No patches directory found, skipping patch application.");
++        return Ok(());
++    }
++
++    // List of patches to apply in order
++    let patch_files = [
++        "anki_qt_window.patch",
++        "anki_branding.patch",
++    ];
++
++    for patch_file in &patch_files {
++        let patch_path = patches_dir.join(patch_file);
++        if patch_path.exists() {
++            println!("Applying patch: {}", patch_file);
++            apply_single_patch(&patch_path, venv_folder)
++                .with_context(|| format!("Failed to apply patch: {}", patch_file))?;
++        } else {
++            println!("Patch not found, skipping: {}", patch_file);
++        }
++    }
++
++    println!("Patch application completed successfully.");
++    Ok(())
++}
++
++/// Get the patches directory relative to the launcher binary
++fn get_patches_directory() -> Result<PathBuf> {
++    let exe_path = std::env::current_exe()
++        .context("Failed to get current executable path")?;
++    let exe_dir = exe_path.parent()
++        .context("Failed to get executable directory")?;
++    Ok(exe_dir.join("patches"))
++}
++
++/// Apply a single patch file to the venv
++fn apply_single_patch(patch_path: &Path, venv_folder: &Path) -> Result<()> {
++    // Read the patch file
++    let patch_content = read_file(patch_path)?;
++    let patch_str = String::from_utf8(patch_content)
++        .context("Patch file contains invalid UTF-8")?;
++
++    // Parse the patch using diffy
++    let patch = Patch::from_str(&patch_str)
++        .context("Failed to parse patch file")?;
++
++    // Extract file paths from the patch header and apply to each file
++    apply_patch_to_files(&patch, &patch_str, venv_folder)?;
++
++    Ok(())
++}
++
++/// Apply the patch by parsing file paths from the patch content
++fn apply_patch_to_files(patch: &Patch, patch_str: &str, venv_folder: &Path) -> Result<()> {
++    // Parse the patch content to extract individual file patches
++    let lines: Vec<&str> = patch_str.lines().collect();
++    let mut current_file: Option<String> = None;
++    let mut file_patch_lines: Vec<String> = Vec::new();
++
++    for line in lines {
++        if line.starts_with("--- ") {
++            // If we have a previous file patch, apply it
++            if let Some(file_path) = &current_file {
++                if !file_patch_lines.is_empty() {
++                    apply_file_patch(file_path, &file_patch_lines.join("\n"), venv_folder)?;
++                }
++            }
++
++            // Start new file patch
++            current_file = None;
++            file_patch_lines.clear();
++            file_patch_lines.push(line.to_string());
++        } else if line.starts_with("+++ ") {
++            // Extract the target file path
++            let target_path = line.strip_prefix("+++ ").unwrap_or("");
++            current_file = Some(target_path.to_string());
++            file_patch_lines.push(line.to_string());
++        } else {
++            // Add line to current file patch
++            file_patch_lines.push(line.to_string());
++        }
++    }
++
++    // Apply the last file patch if exists
++    if let Some(file_path) = &current_file {
++        if !file_patch_lines.is_empty() {
++            apply_file_patch(file_path, &file_patch_lines.join("\n"), venv_folder)?;
++        }
++    }
++
++    Ok(())
++}
++
++/// Apply patch to a specific file
++fn apply_file_patch(target_path: &str, patch_content: &str, venv_folder: &Path) -> Result<()> {
++    // Convert patch path to actual file path in venv
++    let file_path = resolve_patch_path(target_path, venv_folder)?;
++
++    if !file_path.exists() {
++        println!("Warning: Target file does not exist, skipping: {}", file_path.display());
++        return Ok(());
++    }
++
++    // Create backup before applying patch
++    let backup_path = create_backup(&file_path)?;
++
++    // Read the original file
++    let original_content = read_file(&file_path)?;
++    let original_str = String::from_utf8(original_content)
++        .context("Original file contains invalid UTF-8")?;
++
++    // Parse and apply just this file's patch
++    match Patch::from_str(patch_content) {
++        Ok(file_patch) => {
++            match file_patch.apply(&original_str) {
++                Ok(patched_content) => {
++                    // Write the patched content
++                    write_file(&file_path, &patched_content)?;
++                    println!("Successfully patched: {}", file_path.display());
++                }
++                Err(e) => {
++                    // Restore backup on failure
++                    copy_file(&backup_path, &file_path)?;
++                    println!("Failed to apply patch to {}: {}", file_path.display(), e);
++                    println!("Original file restored from backup.");
++                }
++            }
++        }
++        Err(e) => {
++            println!("Failed to parse patch for {}: {}", file_path.display(), e);
++        }
++    }
++
++    Ok(())
++}
++
++/// Resolve patch file path to actual file system path
++fn resolve_patch_path(patch_path: &str, venv_folder: &Path) -> Result<PathBuf> {
++    // Remove common patch prefixes like "a/" or "b/"
++    let clean_path = patch_path
++        .strip_prefix("a/")
++        .or_else(|| patch_path.strip_prefix("b/"))
++        .unwrap_or(patch_path);
++
++    // Build the full path relative to venv
++    let full_path = venv_folder.join(clean_path);
++
++    Ok(full_path)
++}
++
++/// Create a backup of the file before patching
++fn create_backup(file_path: &Path) -> Result<PathBuf> {
++    let backup_path = file_path.with_extension(
++        format!("{}.backup",
++                file_path.extension()
++                    .and_then(|s| s.to_str())
++                    .unwrap_or(""))
++    );
++
++    copy_file(file_path, &backup_path)?;
++    Ok(backup_path)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_resolve_patch_path() {
++        let venv = PathBuf::from("/tmp/venv");
++
++        assert_eq!(
++            resolve_patch_path("a/src/main.py", &venv).unwrap(),
++            PathBuf::from("/tmp/venv/src/main.py")
++        );
++
++        assert_eq!(
++            resolve_patch_path("b/lib/aqt/__init__.py", &venv).unwrap(),
++            PathBuf::from("/tmp/venv/lib/aqt/__init__.py")
++        );
++
++        assert_eq!(
++            resolve_patch_path("src/main.py", &venv).unwrap(),
++            PathBuf::from("/tmp/venv/src/main.py")
++        );
++    }
++}
+\ No newline at end of file

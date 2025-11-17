@@ -1,0 +1,18 @@
+--- original_anki_src_repo/qt/launcher/src/platform/mac.rs	2025-11-16 20:59:15.520688837 +0100
++++ v1_from_src_repo/qt/launcher/src/platform/mac.rs	2025-11-16 20:58:48.815297093 +0100
+@@ -80,13 +80,13 @@
+ 
+                     match result {
+                         Ok(output) if output.status.success() => {
+-                            println!("Anki has been uninstalled.");
++                            println!("AnkiBlur has been uninstalled.");
+                             return;
+                         }
+                         _ => {
+                             // Fall back to manual instructions
+                             println!(
+-                                "Please manually drag Anki.app to the trash to complete uninstall."
++                                "Please manually drag AnkiBlur.app to the trash to complete uninstall."
+                             );
+                         }
+                     }

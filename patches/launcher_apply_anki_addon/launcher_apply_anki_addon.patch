@@ -1,0 +1,464 @@
+diff -ruN '--exclude=target' v1_with_previous_anki_patches/Cargo.lock cp_from_other_dir/Cargo.lock
+--- v1_with_previous_anki_patches/Cargo.lock	2025-11-16 20:46:54.023522031 +0100
++++ cp_from_other_dir/Cargo.lock	2025-11-17 01:44:54.579761017 +0100
+@@ -18,17 +18,6 @@
+ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
+ 
+ [[package]]
+-name = "aes"
+-version = "0.8.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "b169f7a6d4742236a0a00c541b845991d0ac43e546831af1249753ab4c3aa3a0"
+-dependencies = [
+- "cfg-if",
+- "cipher",
+- "cpufeatures",
+-]
+-
+-[[package]]
+ name = "ahash"
+ version = "0.8.12"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -133,7 +122,7 @@
+  "num_cpus",
+  "num_enum",
+  "once_cell",
+- "pbkdf2 0.12.2",
++ "pbkdf2",
+  "percent-encoding-iri",
+  "phf 0.11.3",
+  "pin-project",
+@@ -170,7 +159,7 @@
+  "windows 0.61.3",
+  "wiremock",
+  "zip 4.6.0",
+- "zstd 0.13.3",
++ "zstd",
+ ]
+ 
+ [[package]]
+@@ -609,7 +598,7 @@
+  "arrayvec",
+  "cc",
+  "cfg-if",
+- "constant_time_eq 0.3.1",
++ "constant_time_eq",
+ ]
+ 
+ [[package]]
+@@ -956,26 +945,6 @@
+ checksum = "2e93abca9e28e0a1b9877922aacb20576e05d4679ffa78c3d6dc22a26a216659"
+ 
+ [[package]]
+-name = "bzip2"
+-version = "0.4.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "bdb116a6ef3f6c3698828873ad02c3014b3c85cadb88496095628e3ef1e347f8"
+-dependencies = [
+- "bzip2-sys",
+- "libc",
+-]
+-
+-[[package]]
+-name = "bzip2-sys"
+-version = "0.1.13+1.0.8"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "225bff33b2141874fe80d71e07d6eec4f85c5c216453dd96388240f96e1acc14"
+-dependencies = [
+- "cc",
+- "pkg-config",
+-]
+-
+-[[package]]
+ name = "camino"
+ version = "1.1.12"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1072,16 +1041,6 @@
+ ]
+ 
+ [[package]]
+-name = "cipher"
+-version = "0.4.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
+-dependencies = [
+- "crypto-common",
+- "inout",
+-]
+-
+-[[package]]
+ name = "clap"
+ version = "4.5.46"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -1205,8 +1164,8 @@
+ checksum = "485abf41ac0c8047c07c87c72c8fb3eb5197f6e9d7ded615dfd1a00ae00a0f64"
+ dependencies = [
+  "compression-core",
+- "zstd 0.13.3",
+- "zstd-safe 7.2.4",
++ "zstd",
++ "zstd-safe",
+ ]
+ 
+ [[package]]
+@@ -1235,12 +1194,6 @@
+ 
+ [[package]]
+ name = "constant_time_eq"
+-version = "0.1.5"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
+-
+-[[package]]
+-name = "constant_time_eq"
+ version = "0.3.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
+@@ -3426,15 +3379,6 @@
+ ]
+ 
+ [[package]]
+-name = "inout"
+-version = "0.1.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "879f10e63c20629ecabbb64a8010319738c66a5cd0c29b02d63d272b03751d01"
+-dependencies = [
+- "generic-array",
+-]
+-
+-[[package]]
+ name = "intl-memoizer"
+ version = "0.5.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+@@ -3629,11 +3573,9 @@
+  "embed-resource",
+  "libc",
+  "libc-stdhandle",
+- "reqwest 0.11.27",
+  "serde_json",
+  "widestring",
+  "windows 0.61.3",
+- "zip 0.6.6",
+ ]
+ 
+ [[package]]
+@@ -4585,17 +4527,6 @@
+ 
+ [[package]]
+ name = "password-hash"
+-version = "0.4.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7676374caaee8a325c9e7a2ae557f216c5563a171d6997b0ef8a65af35147700"
+-dependencies = [
+- "base64ct",
+- "rand_core 0.6.4",
+- "subtle",
+-]
+-
+-[[package]]
+-name = "password-hash"
+ version = "0.5.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "346f04948ba92c43e8469c1ee6736c7563d71012b17d40745260fe106aac2166"
+@@ -4619,25 +4550,13 @@
+ 
+ [[package]]
+ name = "pbkdf2"
+-version = "0.11.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "83a0692ec44e4cf1ef28ca317f14f8f07da2d95ec3fa01f86e4467b725e60917"
+-dependencies = [
+- "digest",
+- "hmac",
+- "password-hash 0.4.2",
+- "sha2",
+-]
+-
+-[[package]]
+-name = "pbkdf2"
+ version = "0.12.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f8ed6a7761f76e3b9f92dfb0a60a6a6477c61024b775147ff0973a02653abaf2"
+ dependencies = [
+  "digest",
+  "hmac",
+- "password-hash 0.5.0",
++ "password-hash",
+  "sha2",
+ ]
+ 
+@@ -5620,7 +5539,7 @@
+  "which",
+  "xz2",
+  "zip 4.6.0",
+- "zstd 0.13.3",
++ "zstd",
+ ]
+ 
+ [[package]]
+@@ -8197,26 +8116,6 @@
+ 
+ [[package]]
+ name = "zip"
+-version = "0.6.6"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "760394e246e4c28189f19d488c058bf16f564016aefac5d32bb1f3b51d5e9261"
+-dependencies = [
+- "aes",
+- "byteorder",
+- "bzip2",
+- "constant_time_eq 0.1.5",
+- "crc32fast",
+- "crossbeam-utils",
+- "flate2",
+- "hmac",
+- "pbkdf2 0.11.0",
+- "sha1",
+- "time",
+- "zstd 0.11.2+zstd.1.5.2",
+-]
+-
+-[[package]]
+-name = "zip"
+ version = "1.1.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9cc23c04387f4da0374be4533ad1208cbb091d5c11d070dfef13676ad6497164"
+@@ -8265,30 +8164,11 @@
+ 
+ [[package]]
+ name = "zstd"
+-version = "0.11.2+zstd.1.5.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "20cc960326ece64f010d2d2107537f26dc589a6573a316bd5b1dba685fa5fde4"
+-dependencies = [
+- "zstd-safe 5.0.2+zstd.1.5.2",
+-]
+-
+-[[package]]
+-name = "zstd"
+ version = "0.13.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
+ dependencies = [
+- "zstd-safe 7.2.4",
+-]
+-
+-[[package]]
+-name = "zstd-safe"
+-version = "5.0.2+zstd.1.5.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "1d2a5585e04f9eea4b2a3d1eca508c4dee9592a89ef6f450c11719da0726f4db"
+-dependencies = [
+- "libc",
+- "zstd-sys",
++ "zstd-safe",
+ ]
+ 
+ [[package]]
+diff -ruN '--exclude=target' v1_with_previous_anki_patches/qt/launcher/Cargo.toml cp_from_other_dir/qt/launcher/Cargo.toml
+--- v1_with_previous_anki_patches/qt/launcher/Cargo.toml	2025-11-16 20:46:54.033338743 +0100
++++ cp_from_other_dir/qt/launcher/Cargo.toml	2025-11-17 01:44:54.588641252 +0100
+@@ -15,8 +15,6 @@
+ dirs.workspace = true
+ serde_json.workspace = true
+ diffy = "0.4"
+-reqwest = { version = "0.11", features = ["blocking"] }
+-zip = "0.6"
+ 
+ [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+ libc.workspace = true
+diff -ruN '--exclude=target' v1_with_previous_anki_patches/qt/launcher/src/addon.rs cp_from_other_dir/qt/launcher/src/addon.rs
+--- v1_with_previous_anki_patches/qt/launcher/src/addon.rs	2025-11-16 20:46:54.033171077 +0100
++++ cp_from_other_dir/qt/launcher/src/addon.rs	1970-01-01 01:00:00.000000000 +0100
+@@ -1,166 +0,0 @@
+-use std::path::{Path, PathBuf};
+-use std::io::Cursor;
+-use anki_io::{write_file, create_dir_all, remove_dir_all};
+-use anyhow::{Context, Result};
+-use zip::ZipArchive;
+-
+-/// Install the AnkiBlur background theme addon from GitHub
+-pub fn install_ankiblur_addon() -> Result<()> {
+-    println!("Installing AnkiBlur background theme addon...");
+-
+-    // Get the addon installation directory
+-    let addons_path = get_anki_addons21_path()?;
+-    if !addons_path.exists() {
+-        println!("Warning: Anki addons directory does not exist, skipping addon installation.");
+-        return Ok(());
+-    }
+-
+-    // Download the addon from GitHub
+-    let addon_data = download_ankiblur_addon()?;
+-
+-    // Install the addon
+-    install_addon_from_data(&addon_data, &addons_path)?;
+-
+-    println!("AnkiBlur background theme addon installed successfully.");
+-    Ok(())
+-}
+-
+-/// Download the AnkiBlur addon from GitHub
+-fn download_ankiblur_addon() -> Result<Vec<u8>> {
+-    let addon_url = "https://raw.githubusercontent.com/NullGates/AnkiBlur/main/patches/anki_webview_addon/ankiblur_background_theme.ankiaddon";
+-
+-    println!("Downloading addon from: {}", addon_url);
+-
+-    let response = reqwest::blocking::get(addon_url)
+-        .context("Failed to download addon from GitHub")?;
+-
+-    if !response.status().is_success() {
+-        return Err(anyhow::anyhow!(
+-            "Failed to download addon: HTTP status {}",
+-            response.status()
+-        ));
+-    }
+-
+-    let addon_data = response.bytes()
+-        .context("Failed to read addon data from response")?;
+-
+-    println!("Successfully downloaded addon ({} bytes)", addon_data.len());
+-    Ok(addon_data.to_vec())
+-}
+-
+-/// Install addon from downloaded data
+-fn install_addon_from_data(addon_data: &[u8], addons_path: &Path) -> Result<()> {
+-    // Create a cursor from the addon data for ZIP reading
+-    let cursor = Cursor::new(addon_data);
+-    let mut archive = ZipArchive::new(cursor)
+-        .context("Failed to open addon as ZIP archive")?;
+-
+-    // Extract addon directory name from the first file
+-    let addon_dir_name = if archive.len() > 0 {
+-        let first_file = archive.by_index(0)?;
+-        let file_path = Path::new(first_file.name());
+-
+-        // Get the top-level directory name
+-        if let Some(first_component) = file_path.components().next() {
+-            first_component.as_os_str().to_string_lossy().to_string()
+-        } else {
+-            "ankiblur_background_theme".to_string()
+-        }
+-    } else {
+-        return Err(anyhow::anyhow!("Addon archive is empty"));
+-    };
+-
+-    let addon_install_path = addons_path.join(&addon_dir_name);
+-
+-    // Remove existing addon if it exists
+-    if addon_install_path.exists() {
+-        println!("Removing existing addon: {}", addon_install_path.display());
+-        remove_dir_all(&addon_install_path)?;
+-    }
+-
+-    // Create addon directory
+-    create_dir_all(&addon_install_path)?;
+-
+-    // Extract all files
+-    for i in 0..archive.len() {
+-        let mut file = archive.by_index(i)?;
+-        let file_path = Path::new(file.name());
+-
+-        // Skip the top-level directory in the path
+-        let relative_path = if file_path.components().count() > 1 {
+-            file_path.components().skip(1).collect::<PathBuf>()
+-        } else {
+-            continue; // Skip directory entries
+-        };
+-
+-        let output_path = addon_install_path.join(&relative_path);
+-
+-        if file.name().ends_with('/') {
+-            // Directory
+-            create_dir_all(&output_path)?;
+-        } else {
+-            // File
+-            if let Some(parent) = output_path.parent() {
+-                create_dir_all(parent)?;
+-            }
+-
+-            // Read file content
+-            let mut file_content = Vec::new();
+-            std::io::copy(&mut file, &mut file_content)?;
+-
+-            // Write file
+-            write_file(&output_path, &file_content)?;
+-
+-            println!("Extracted: {}", relative_path.display());
+-        }
+-    }
+-
+-    println!("Addon installed to: {}", addon_install_path.display());
+-    Ok(())
+-}
+-
+-/// Get the Anki addons21 directory path
+-fn get_anki_addons21_path() -> Result<PathBuf> {
+-    let anki_base_path = get_anki_base_path()?;
+-    Ok(anki_base_path.join("addons21"))
+-}
+-
+-/// Get the Anki base directory path
+-fn get_anki_base_path() -> Result<PathBuf> {
+-    let anki_base_path = if cfg!(target_os = "windows") {
+-        // Windows: %APPDATA%\Anki2
+-        dirs::config_dir()
+-            .context("Unable to determine config directory")?
+-            .join("Anki2")
+-    } else if cfg!(target_os = "macos") {
+-        // macOS: ~/Library/Application Support/Anki2
+-        dirs::data_dir()
+-            .context("Unable to determine data directory")?
+-            .join("Anki2")
+-    } else {
+-        // Linux: ~/.local/share/Anki2
+-        dirs::data_dir()
+-            .context("Unable to determine data directory")?
+-            .join("Anki2")
+-    };
+-
+-    Ok(anki_base_path)
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn test_get_anki_base_path() {
+-        let path = get_anki_base_path().unwrap();
+-        assert!(path.to_string_lossy().contains("Anki2"));
+-    }
+-
+-    #[test]
+-    fn test_get_anki_addons21_path() {
+-        let path = get_anki_addons21_path().unwrap();
+-        assert!(path.to_string_lossy().contains("Anki2"));
+-        assert!(path.to_string_lossy().contains("addons21"));
+-    }
+-}
+\ No newline at end of file
+diff -ruN '--exclude=target' v1_with_previous_anki_patches/qt/launcher/src/main.rs cp_from_other_dir/qt/launcher/src/main.rs
+--- v1_with_previous_anki_patches/qt/launcher/src/main.rs	2025-11-16 20:46:54.033058994 +0100
++++ cp_from_other_dir/qt/launcher/src/main.rs	2025-11-17 01:44:54.588384205 +0100
+@@ -30,7 +30,6 @@
+ 
+ mod platform;
+ mod patch;
+-mod addon;
+ 
+ struct State {
+     current_version: Option<String>,
+@@ -357,12 +356,6 @@
+                 println!("Anki will continue without patches.");
+             }
+ 
+-            // Install AnkiBlur addon from GitHub after patches
+-            if let Err(e) = addon::install_ankiblur_addon() {
+-                println!("Warning: Failed to install AnkiBlur addon: {e:#}");
+-                println!("Anki will continue without the addon.");
+-            }
+-
+             Ok(())
+         }
+         Err(e) => {
