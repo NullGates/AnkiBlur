@@ -338,7 +338,6 @@ jobs:
         SDKROOT: ${{ matrix.platform == 'macos' && '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk' || '' }}
         CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER: ${{ matrix.platform == 'macos' && 'clang' || '' }}
         CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER: ${{ matrix.platform == 'macos' && 'clang' || '' }}
-        CARGO_TARGET_DIR: ${{ matrix.platform == 'macos' && 'target' || '' }}
       run: |
         echo "Building on ${{ matrix.platform }} platform"
 
@@ -366,7 +365,10 @@ jobs:
 
           # Run the Windows build script
           echo "Running build script..."
-          cmd.exe //c "set CODESIGN=0 && set NO_COMPRESS=1 && ${{ matrix.build_script }}"
+          # Convert Unix path to Windows path
+          WINDOWS_SCRIPT=$(echo "${{ matrix.build_script }}" | sed 's/\//\\/g')
+          echo "Windows script path: $WINDOWS_SCRIPT"
+          cmd.exe //c "set CODESIGN=0 && set NO_COMPRESS=1 && $WINDOWS_SCRIPT"
         else
           # Set NODMG=1 for macOS to skip DMG creation in build script
           if [[ "${{ matrix.platform }}" == "macos" ]]; then
