@@ -152,13 +152,69 @@ jobs:
       shell: bash
       working-directory: anki-source
       run: |
-        # Patch Linux build script to only build for host architecture
-        if [[ "${{ matrix.platform }}" == "linux-x86_64" ]]; then
-          echo "Patching Linux build script for x86_64 native build..."
-          sed -i 's/cargo build -p launcher --release --target aarch64-unknown-linux-gnu/echo "Skipping ARM64 cross-compilation"/' qt/launcher/lin/build.sh
-          sed -i 's/CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc/echo "Skipping cross-linker setup"/' qt/launcher/lin/build.sh
-          sed -i 's/.\/ninja extract:uv_lin_arm/echo "Skipping ARM uv extraction"/' qt/launcher/lin/build.sh
-        fi
+        # Replace the entire Linux build script with a single-architecture version
+        cat > qt/launcher/lin/build.sh << 'EOF'
+#!/bin/bash
+set -e
+
+# Detect host architecture
+HOST_ARCH=$(uname -m)
+if [ "$HOST_ARCH" = "x86_64" ]; then
+    RUST_TARGET="x86_64-unknown-linux-gnu"
+    ARCH_SUFFIX="amd64"
+else
+    RUST_TARGET="aarch64-unknown-linux-gnu"
+    ARCH_SUFFIX="arm64"
+fi
+
+# Add Rust target
+rustup target add $RUST_TARGET
+
+# Define output paths
+OUTPUT_DIR="../../../out/launcher"
+ANKI_VERSION=$(cat ../../../.version | tr -d '\n')
+LAUNCHER_DIR="$OUTPUT_DIR/anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX"
+
+# Clean and create output directory
+rm -rf "$LAUNCHER_DIR"
+mkdir -p "$LAUNCHER_DIR"
+
+# Build native binary only
+cargo build -p launcher --release --target $RUST_TARGET
+
+# Copy binaries and support files
+TARGET_DIR=${CARGO_TARGET_DIR:-../../../target}
+cp "$TARGET_DIR/$RUST_TARGET/release/launcher" "$LAUNCHER_DIR/launcher"
+cp "../../../out/extracted/uv/uv" "$LAUNCHER_DIR/uv"
+
+# Copy support files from lin directory
+for file in README.md anki.1 anki.desktop anki.png anki.xml anki.xpm install.sh uninstall.sh anki; do
+    [ -f "$file" ] && cp "$file" "$LAUNCHER_DIR/" || echo "Warning: $file not found"
+done
+
+# Copy additional files from parent directory
+[ -f "../pyproject.toml" ] && cp ../pyproject.toml "$LAUNCHER_DIR/"
+[ -f "../../../.python-version" ] && cp ../../../.python-version "$LAUNCHER_DIR/"
+[ -f "../versions.py" ] && cp ../versions.py "$LAUNCHER_DIR/"
+
+# Set executable permissions
+chmod +x "$LAUNCHER_DIR/launcher" "$LAUNCHER_DIR/uv" "$LAUNCHER_DIR/anki" || true
+chmod +x "$LAUNCHER_DIR/install.sh" "$LAUNCHER_DIR/uninstall.sh" || true
+
+# Set proper permissions and create tarball
+chmod -R a+r "$LAUNCHER_DIR"
+
+ZSTD="zstd -c --long -T0 -18"
+TRANSFORM="s%^.%anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX%S"
+TARBALL="$OUTPUT_DIR/anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX.tar.zst"
+
+tar -I "$ZSTD" --transform "$TRANSFORM" -cf "$TARBALL" -C "$LAUNCHER_DIR" .
+
+echo "Build complete:"
+echo "Launcher: $LAUNCHER_DIR"
+echo "Tarball: $TARBALL"
+EOF
+        chmod +x qt/launcher/lin/build.sh
 
     - name: Build Launcher
       shell: bash
@@ -199,14 +255,22 @@ jobs:
     - name: Package Artifacts
       shell: bash
       run: |
-        chmod +x scripts/package-artifacts.sh
-        # Map new platform names to ones expected by package script
-        if [[ "${{ matrix.platform }}" == "linux-x86_64" ]] || [[ "${{ matrix.platform }}" == "linux-arm64" ]]; then
-          PACKAGE_PLATFORM="linux"
+        mkdir -p artifacts
+
+        if [[ "${{ matrix.platform }}" == "linux-x86_64" ]]; then
+          # Copy the amd64 tarball to the expected artifact name
+          cp anki-source/out/launcher/anki-launcher-${{ env.ANKI_VERSION }}-linux-amd64.tar.zst \
+             artifacts/anki-launcher-linux-x86_64.tar.zst
+        elif [[ "${{ matrix.platform }}" == "linux-arm64" ]]; then
+          # Copy the arm64 tarball to the expected artifact name
+          cp anki-source/out/launcher/anki-launcher-${{ env.ANKI_VERSION }}-linux-arm64.tar.zst \
+             artifacts/anki-launcher-linux-arm64.tar.zst
         else
+          # For other platforms, use the package script
+          chmod +x scripts/package-artifacts.sh
           PACKAGE_PLATFORM="${{ matrix.platform }}"
+          ./scripts/package-artifacts.sh anki-source "$PACKAGE_PLATFORM" ${{ env.ANKI_VERSION }}
         fi
-        ./scripts/package-artifacts.sh anki-source "$PACKAGE_PLATFORM" ${{ env.ANKI_VERSION }}
 
     - name: Generate Checksums
       shell: bash
