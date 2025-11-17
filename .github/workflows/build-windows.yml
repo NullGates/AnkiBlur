@@ -87,31 +87,16 @@ jobs:
         # Move the uv.exe to the expected location
         Move-Item -Path "out\extracted\uv.exe" -Destination "out\extracted\uv\uv.exe" -Force
 
-    - name: Download and Extract NSIS Plugins
+    - name: Copy NSIS Plugins
       shell: bash
       working-directory: anki-source
       run: |
-        echo "Downloading nsProcess NSIS plugin..."
+        echo "Setting up nsProcess NSIS plugin..."
         mkdir -p out/extracted/nsis_plugins
 
-        # Download nsProcess plugin from NSIS website
-        curl -L https://nsis.sourceforge.io/mediawiki/images/1/18/NsProcess.zip -o nsprocess.zip
-
-        # Extract the plugin
-        unzip -o nsprocess.zip -d temp_nsprocess
-
-        # Copy the DLL to the expected location
-        if [ -f "temp_nsprocess/Plugin/nsProcess.dll" ]; then
-          cp temp_nsprocess/Plugin/nsProcess.dll out/extracted/nsis_plugins/
-          echo "nsProcess.dll copied successfully"
-        elif [ -f "temp_nsprocess/nsProcess.dll" ]; then
-          cp temp_nsprocess/nsProcess.dll out/extracted/nsis_plugins/
-          echo "nsProcess.dll copied successfully"
-        else
-          echo "Warning: Could not find nsProcess.dll in extracted archive"
-          echo "Contents of temp_nsprocess:"
-          ls -la temp_nsprocess/
-        fi
+        # Copy nsProcess.dll from the repository
+        # This DLL was extracted from the official Anki 25.09 Windows installer
+        cp ../nsProcess.dll out/extracted/nsis_plugins/
 
         # Verify the file exists
         if [ -f "out/extracted/nsis_plugins/nsProcess.dll" ]; then
@@ -119,11 +104,9 @@ jobs:
           ls -la out/extracted/nsis_plugins/
         else
           echo "✗ ERROR: nsProcess.dll not found at expected location"
+          echo "Make sure nsProcess.dll exists in the repository root"
           exit 1
         fi
-
-        # Clean up
-        rm -rf temp_nsprocess nsprocess.zip
 
     - name: Patch Build Scripts for NSIS Path
       shell: bash
