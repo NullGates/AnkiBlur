@@ -81,6 +81,19 @@ jobs:
         # Install NSIS for Windows installer creation
         choco install nsis -y
 
+        # Verify NSIS installation
+        Get-Command makensis -ErrorAction SilentlyContinue | Out-Null
+        if ($?) {
+            Write-Host "NSIS installed successfully"
+            & makensis /VERSION
+        } else {
+            Write-Host "WARNING: makensis not found in PATH"
+            # Check common installation paths
+            if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
+                Write-Host "Found NSIS at: C:\Program Files (x86)\NSIS\makensis.exe"
+            }
+        }
+
     - name: Download Anki Source
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
@@ -145,7 +158,35 @@ jobs:
         # Download UV for Windows
         New-Item -ItemType Directory -Force -Path out\extracted\uv
         Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip" -OutFile "uv-windows.zip"
-        Expand-Archive -Path "uv-windows.zip" -DestinationPath "out\extracted\uv"
+        Expand-Archive -Path "uv-windows.zip" -DestinationPath "out\extracted"
+        # Move the uv.exe to the expected location
+        Move-Item -Path "out\extracted\uv.exe" -Destination "out\extracted\uv\uv.exe" -Force
+
+    - name: Patch Build Scripts for Windows NSIS Path
+      if: matrix.platform == 'windows'
+      shell: bash
+      working-directory: anki-source
+      run: |
+        # Patch the build_win.rs to use makensis from PATH if not found at hardcoded location
+        cat > qt/launcher/src/bin/build_win_patch.txt << 'EOF'
+--- a/qt/launcher/src/bin/build_win.rs
++++ b/qt/launcher/src/bin/build_win.rs
+@@ -17,7 +17,7 @@ const OUTPUT_DIR: &str = "../../../out/launcher";
+ const LAUNCHER_EXE_DIR: &str = "../../../out/launcher_exe";
+ const NSIS_DIR: &str = "../../../out/nsis";
+ const CARGO_TARGET_DIR: &str = "../../../out/rust";
+-const NSIS_PATH: &str = "C:\\Program Files (x86)\\NSIS\\makensis.exe";
++const NSIS_PATH: &str = "makensis.exe";  // Use from PATH
+
+ fn main() -> Result<()> {
+     println!("Building Windows launcher...");
+EOF
+        # Apply the patch if the file exists
+        if [ -f "qt/launcher/src/bin/build_win.rs" ]; then
+          echo "Patching build_win.rs to use makensis from PATH..."
+          sed -i 's|const NSIS_PATH: &str = "C:\\\\Program Files (x86)\\\\NSIS\\\\makensis.exe";|const NSIS_PATH: \&str = "makensis.exe";|' qt/launcher/src/bin/build_win.rs
+          echo "Patch applied successfully"
+        fi
 
     - name: Patch Build Scripts for Native-Only Builds
       if: startsWith(matrix.platform, 'linux')
@@ -216,19 +257,91 @@ jobs:
         EOF
         chmod +x qt/launcher/lin/build.sh
 
-    - name: Pre-build macOS targets
+    - name: Patch macOS Build Script
       if: matrix.platform == 'macos'
+      shell: bash
       working-directory: anki-source
       run: |
-        echo "Pre-building both macOS architectures..."
-        # Ensure both targets are installed
-        rustup target add x86_64-apple-darwin aarch64-apple-darwin
+        # Replace the macOS build script to avoid redundant builds
+        cat > qt/launcher/mac/build.sh << 'EOF'
+        #!/bin/bash
+        set -e
 
-        # Build both architectures explicitly
+        echo "Building macOS launcher..."
+
+        # Define output path
+        OUTPUT_DIR="../../../out/launcher"
+        APP_LAUNCHER="$OUTPUT_DIR/Anki.app"
+
+        # Build binaries for both architectures
+        echo "Building launcher for both architectures..."
+        rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+        # Set explicit target directory
+        export CARGO_TARGET_DIR="../../../target"
+
         cargo build -p launcher --release --target aarch64-apple-darwin
         cargo build -p launcher --release --target x86_64-apple-darwin
 
-        echo "Both architectures built successfully"
+        # Build UV universal binary
+        (cd ../../.. && ./ninja launcher:uv_universal)
+
+        # Ensure output directory exists
+        mkdir -p "$OUTPUT_DIR"
+
+        # Remove existing app launcher
+        rm -rf "$APP_LAUNCHER"
+
+        # Create app launcher structure
+        mkdir -p "$APP_LAUNCHER/Contents/MacOS" "$APP_LAUNCHER/Contents/Resources"
+
+        # Create universal binary
+        echo "Creating universal binary with lipo..."
+        lipo -create \
+            "$CARGO_TARGET_DIR/aarch64-apple-darwin/release/launcher" \
+            "$CARGO_TARGET_DIR/x86_64-apple-darwin/release/launcher" \
+            -output "$APP_LAUNCHER/Contents/MacOS/launcher"
+
+        # Copy UV
+        cp "$OUTPUT_DIR/uv" "$APP_LAUNCHER/Contents/MacOS/"
+
+        # Build install_name_tool stub
+        clang -arch arm64 -o "$OUTPUT_DIR/stub_arm64" stub.c
+        clang -arch x86_64 -o "$OUTPUT_DIR/stub_x86_64" stub.c
+        lipo -create "$OUTPUT_DIR/stub_arm64" "$OUTPUT_DIR/stub_x86_64" -output "$APP_LAUNCHER/Contents/MacOS/install_name_tool"
+        rm "$OUTPUT_DIR/stub_arm64" "$OUTPUT_DIR/stub_x86_64"
+
+        # Copy support files
+        ANKI_VERSION=$(cat ../../../.version | tr -d '\n')
+        sed "s/ANKI_VERSION/$ANKI_VERSION/g" Info.plist > "$APP_LAUNCHER/Contents/Info.plist"
+        cp icon/Assets.car "$APP_LAUNCHER/Contents/Resources/"
+        cp ../pyproject.toml "$APP_LAUNCHER/Contents/Resources/"
+        cp ../../../.python-version "$APP_LAUNCHER/Contents/Resources/"
+        cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
+
+        # Skip codesigning if NODMG is set
+        if [ -z "$NODMG" ]; then
+            echo "Skipping codesigning and DMG creation (NODMG=1)"
+        else
+            # Codesign/bundle
+            for i in "$APP_LAUNCHER/Contents/MacOS/uv" "$APP_LAUNCHER/Contents/MacOS/install_name_tool" "$APP_LAUNCHER/Contents/MacOS/launcher" "$APP_LAUNCHER"; do
+                codesign --force -vvvv -o runtime -s "Developer ID Application:" \
+                --entitlements entitlements.python.xml \
+                "$i"
+            done
+
+            # Check
+            codesign -vvv "$APP_LAUNCHER"
+            spctl -a "$APP_LAUNCHER"
+
+            # Notarize and build dmg
+            ./notarize.sh "$OUTPUT_DIR"
+            ./dmg/build.sh "$OUTPUT_DIR"
+        fi
+
+        echo "macOS build completed successfully!"
+        EOF
+        chmod +x qt/launcher/mac/build.sh
 
     - name: Build Launcher
       shell: bash
@@ -238,6 +351,7 @@ jobs:
         SDKROOT: ${{ matrix.platform == 'macos' && '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk' || '' }}
         CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER: ${{ matrix.platform == 'macos' && 'clang' || '' }}
         CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER: ${{ matrix.platform == 'macos' && 'clang' || '' }}
+        CARGO_TARGET_DIR: ${{ matrix.platform == 'macos' && 'target' || '' }}
       run: |
         echo "Building on ${{ matrix.platform }} platform"
 
@@ -246,18 +360,26 @@ jobs:
           export CODESIGN=0
           export NO_COMPRESS=1
 
-          # Add NSIS to PATH if it exists
-          if [ -d "/c/Program Files (x86)/NSIS" ]; then
+          # Verify NSIS installation
+          echo "Checking NSIS installation..."
+          if [ -f "/c/Program Files (x86)/NSIS/makensis.exe" ]; then
+            echo "NSIS found at: /c/Program Files (x86)/NSIS/makensis.exe"
             export PATH="/c/Program Files (x86)/NSIS:$PATH"
+            echo "NSIS added to PATH"
+          else
+            echo "ERROR: NSIS not found at expected location"
+            echo "Checking alternative locations..."
+            find /c -name "makensis.exe" 2>/dev/null | head -5 || echo "makensis.exe not found"
           fi
 
-          # Debug: Show current directory and files
+          # Debug: Show environment
           echo "Current directory: $(pwd)"
           echo "Build script: ${{ matrix.build_script }}"
+          echo "PATH: $PATH"
 
-          # Use cmd.exe directly with proper Windows path
-          WINDOWS_SCRIPT=$(echo "${{ matrix.build_script }}" | sed 's/\//\\/g')
-          cmd.exe //c "$WINDOWS_SCRIPT"
+          # Run the Windows build script
+          echo "Running build script..."
+          cmd.exe //c "set CODESIGN=0 && set NO_COMPRESS=1 && ${{ matrix.build_script }}"
         else
           # Set NODMG=1 for macOS to skip DMG creation in build script
           if [[ "${{ matrix.platform }}" == "macos" ]]; then
