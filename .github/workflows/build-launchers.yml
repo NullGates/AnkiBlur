@@ -216,6 +216,20 @@ jobs:
         EOF
         chmod +x qt/launcher/lin/build.sh
 
+    - name: Pre-build macOS targets
+      if: matrix.platform == 'macos'
+      working-directory: anki-source
+      run: |
+        echo "Pre-building both macOS architectures..."
+        # Ensure both targets are installed
+        rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
+        # Build both architectures explicitly
+        cargo build -p launcher --release --target aarch64-apple-darwin
+        cargo build -p launcher --release --target x86_64-apple-darwin
+
+        echo "Both architectures built successfully"
+
     - name: Build Launcher
       shell: bash
       working-directory: anki-source
@@ -231,8 +245,19 @@ jobs:
           # Set environment variables for Windows build
           export CODESIGN=0
           export NO_COMPRESS=1
-          # Use PowerShell to execute batch file with proper path handling
-          powershell.exe -Command "& '${{ matrix.build_script }}'"
+
+          # Add NSIS to PATH if it exists
+          if [ -d "/c/Program Files (x86)/NSIS" ]; then
+            export PATH="/c/Program Files (x86)/NSIS:$PATH"
+          fi
+
+          # Debug: Show current directory and files
+          echo "Current directory: $(pwd)"
+          echo "Build script: ${{ matrix.build_script }}"
+
+          # Use cmd.exe directly with proper Windows path
+          WINDOWS_SCRIPT=$(echo "${{ matrix.build_script }}" | sed 's/\//\\/g')
+          cmd.exe //c "$WINDOWS_SCRIPT"
         else
           # Set NODMG=1 for macOS to skip DMG creation in build script
           if [[ "${{ matrix.platform }}" == "macos" ]]; then
