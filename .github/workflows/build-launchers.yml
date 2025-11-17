@@ -60,6 +60,8 @@ jobs:
         sudo apt-get install -y \
           gcc-aarch64-linux-gnu \
           libc6-dev-arm64-cross \
+          libssl-dev:arm64 \
+          pkg-config-aarch64-linux-gnu \
           zstd \
           tar \
           patch
@@ -78,9 +80,7 @@ jobs:
 
     - name: Download Anki Source
       run: |
-        curl -L https://github.com/ankitects/anki/archive/refs/tags/${{ env.ANKI_VERSION }}.tar.gz -o anki-source.tar.gz
-        tar -xzf anki-source.tar.gz
-        mv anki-${{ env.ANKI_VERSION }} anki-source
+        git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
 
     - name: Validate and Apply Patches
       shell: bash
@@ -146,12 +146,14 @@ jobs:
     - name: Build Launcher
       shell: bash
       working-directory: anki-source
+      env:
+        PKG_CONFIG_ALLOW_CROSS: 1
       run: |
         if [[ "${{ matrix.platform }}" == "windows" ]]; then
           # Set environment variables for Windows build
           export CODESIGN=0
           export NO_COMPRESS=1
-          cmd.exe //C "${{ matrix.build_script }}"
+          cmd.exe //C ".\${{ matrix.build_script }}"
         else
           # Set NODMG=1 for macOS to skip DMG creation in build script
           if [[ "${{ matrix.platform }}" == "macos" ]]; then
