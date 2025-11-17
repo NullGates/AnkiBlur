@@ -157,63 +157,63 @@ jobs:
         #!/bin/bash
         set -e
 
-# Detect host architecture
-HOST_ARCH=$(uname -m)
-if [ "$HOST_ARCH" = "x86_64" ]; then
-    RUST_TARGET="x86_64-unknown-linux-gnu"
-    ARCH_SUFFIX="amd64"
-else
-    RUST_TARGET="aarch64-unknown-linux-gnu"
-    ARCH_SUFFIX="arm64"
-fi
+        # Detect host architecture
+        HOST_ARCH=$(uname -m)
+        if [ "$HOST_ARCH" = "x86_64" ]; then
+            RUST_TARGET="x86_64-unknown-linux-gnu"
+            ARCH_SUFFIX="amd64"
+        else
+            RUST_TARGET="aarch64-unknown-linux-gnu"
+            ARCH_SUFFIX="arm64"
+        fi
 
-# Add Rust target
-rustup target add $RUST_TARGET
+        # Add Rust target
+        rustup target add $RUST_TARGET
 
-# Define output paths
-OUTPUT_DIR="../../../out/launcher"
-ANKI_VERSION=$(cat ../../../.version | tr -d '\n')
-LAUNCHER_DIR="$OUTPUT_DIR/anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX"
+        # Define output paths
+        OUTPUT_DIR="../../../out/launcher"
+        ANKI_VERSION=$(cat ../../../.version | tr -d '\n')
+        LAUNCHER_DIR="$OUTPUT_DIR/anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX"
 
-# Clean and create output directory
-rm -rf "$LAUNCHER_DIR"
-mkdir -p "$LAUNCHER_DIR"
+        # Clean and create output directory
+        rm -rf "$LAUNCHER_DIR"
+        mkdir -p "$LAUNCHER_DIR"
 
-# Build native binary only
-cargo build -p launcher --release --target $RUST_TARGET
+        # Build native binary only
+        cargo build -p launcher --release --target $RUST_TARGET
 
-# Copy binaries and support files
-TARGET_DIR=${CARGO_TARGET_DIR:-../../../target}
-cp "$TARGET_DIR/$RUST_TARGET/release/launcher" "$LAUNCHER_DIR/launcher"
-cp "../../../out/extracted/uv/uv" "$LAUNCHER_DIR/uv"
+        # Copy binaries and support files
+        TARGET_DIR=${CARGO_TARGET_DIR:-../../../target}
+        cp "$TARGET_DIR/$RUST_TARGET/release/launcher" "$LAUNCHER_DIR/launcher"
+        cp "../../../out/extracted/uv/uv" "$LAUNCHER_DIR/uv"
 
-# Copy support files from lin directory
-for file in README.md anki.1 anki.desktop anki.png anki.xml anki.xpm install.sh uninstall.sh anki; do
-    [ -f "$file" ] && cp "$file" "$LAUNCHER_DIR/" || echo "Warning: $file not found"
-done
+        # Copy support files from lin directory
+        for file in README.md anki.1 anki.desktop anki.png anki.xml anki.xpm install.sh uninstall.sh anki; do
+            [ -f "$file" ] && cp "$file" "$LAUNCHER_DIR/" || echo "Warning: $file not found"
+        done
 
-# Copy additional files from parent directory
-[ -f "../pyproject.toml" ] && cp ../pyproject.toml "$LAUNCHER_DIR/"
-[ -f "../../../.python-version" ] && cp ../../../.python-version "$LAUNCHER_DIR/"
-[ -f "../versions.py" ] && cp ../versions.py "$LAUNCHER_DIR/"
+        # Copy additional files from parent directory
+        [ -f "../pyproject.toml" ] && cp ../pyproject.toml "$LAUNCHER_DIR/"
+        [ -f "../../../.python-version" ] && cp ../../../.python-version "$LAUNCHER_DIR/"
+        [ -f "../versions.py" ] && cp ../versions.py "$LAUNCHER_DIR/"
 
-# Set executable permissions
-chmod +x "$LAUNCHER_DIR/launcher" "$LAUNCHER_DIR/uv" "$LAUNCHER_DIR/anki" || true
-chmod +x "$LAUNCHER_DIR/install.sh" "$LAUNCHER_DIR/uninstall.sh" || true
+        # Set executable permissions
+        chmod +x "$LAUNCHER_DIR/launcher" "$LAUNCHER_DIR/uv" "$LAUNCHER_DIR/anki" || true
+        chmod +x "$LAUNCHER_DIR/install.sh" "$LAUNCHER_DIR/uninstall.sh" || true
 
-# Set proper permissions and create tarball
-chmod -R a+r "$LAUNCHER_DIR"
+        # Set proper permissions and create tarball
+        chmod -R a+r "$LAUNCHER_DIR"
 
-ZSTD="zstd -c --long -T0 -18"
-TRANSFORM="s%^.%anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX%S"
-TARBALL="$OUTPUT_DIR/anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX.tar.zst"
+        ZSTD="zstd -c --long -T0 -18"
+        TRANSFORM="s%^.%anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX%S"
+        TARBALL="$OUTPUT_DIR/anki-launcher-$ANKI_VERSION-linux-$ARCH_SUFFIX.tar.zst"
 
-tar -I "$ZSTD" --transform "$TRANSFORM" -cf "$TARBALL" -C "$LAUNCHER_DIR" .
+        tar -I "$ZSTD" --transform "$TRANSFORM" -cf "$TARBALL" -C "$LAUNCHER_DIR" .
 
-echo "Build complete:"
-echo "Launcher: $LAUNCHER_DIR"
-echo "Tarball: $TARBALL"
-EOF
+        echo "Build complete:"
+        echo "Launcher: $LAUNCHER_DIR"
+        echo "Tarball: $TARBALL"
+        EOF
         chmod +x qt/launcher/lin/build.sh
 
     - name: Build Launcher
