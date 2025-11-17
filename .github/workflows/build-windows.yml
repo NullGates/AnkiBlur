@@ -87,6 +87,44 @@ jobs:
         # Move the uv.exe to the expected location
         Move-Item -Path "out\extracted\uv.exe" -Destination "out\extracted\uv\uv.exe" -Force
 
+    - name: Download and Extract NSIS Plugins
+      shell: bash
+      working-directory: anki-source
+      run: |
+        echo "Downloading nsProcess NSIS plugin..."
+        mkdir -p out/extracted/nsis_plugins
+
+        # Download nsProcess plugin from NSIS website
+        curl -L https://nsis.sourceforge.io/mediawiki/images/1/18/NsProcess.zip -o nsprocess.zip
+
+        # Extract the plugin
+        unzip -o nsprocess.zip -d temp_nsprocess
+
+        # Copy the DLL to the expected location
+        if [ -f "temp_nsprocess/Plugin/nsProcess.dll" ]; then
+          cp temp_nsprocess/Plugin/nsProcess.dll out/extracted/nsis_plugins/
+          echo "nsProcess.dll copied successfully"
+        elif [ -f "temp_nsprocess/nsProcess.dll" ]; then
+          cp temp_nsprocess/nsProcess.dll out/extracted/nsis_plugins/
+          echo "nsProcess.dll copied successfully"
+        else
+          echo "Warning: Could not find nsProcess.dll in extracted archive"
+          echo "Contents of temp_nsprocess:"
+          ls -la temp_nsprocess/
+        fi
+
+        # Verify the file exists
+        if [ -f "out/extracted/nsis_plugins/nsProcess.dll" ]; then
+          echo "✓ nsProcess.dll is in place at: out/extracted/nsis_plugins/nsProcess.dll"
+          ls -la out/extracted/nsis_plugins/
+        else
+          echo "✗ ERROR: nsProcess.dll not found at expected location"
+          exit 1
+        fi
+
+        # Clean up
+        rm -rf temp_nsprocess nsprocess.zip
+
     - name: Patch Build Scripts for NSIS Path
       shell: bash
       working-directory: anki-source
@@ -138,17 +176,27 @@ jobs:
         echo "${{ env.ANKI_VERSION }}" > .version
         echo "Version file created with content: $(cat .version)"
 
-        # 2. Verify anki.template.nsi exists
+        # 2. Verify nsProcess.dll exists
+        if [ ! -f "out/extracted/nsis_plugins/nsProcess.dll" ]; then
+          echo "Error: nsProcess.dll not found!"
+          echo "Contents of out/extracted/nsis_plugins/:"
+          ls -la out/extracted/nsis_plugins/ || echo "Directory does not exist"
+          exit 1
+        else
+          echo "✓ Found nsProcess.dll"
+        fi
+
+        # 3. Verify anki.template.nsi exists
         if [ ! -f "qt/launcher/win/anki.template.nsi" ]; then
           echo "Error: anki.template.nsi not found!"
           echo "Contents of qt/launcher/win/:"
           ls -la qt/launcher/win/
           exit 1
         else
-          echo "Found anki.template.nsi"
+          echo "✓ Found anki.template.nsi"
         fi
 
-        # 3. Check for other required files
+        # 4. Check for other required files
         echo "Checking for required Windows files..."
         for file in "qt/launcher/win/anki-icon.ico" "qt/launcher/win/fileassoc.nsh" "qt/launcher/win/anki.exe.manifest" "qt/launcher/win/anki-manifest.rc"; do
           if [ -f "$file" ]; then
@@ -167,7 +215,33 @@ jobs:
         # Convert Unix path to Windows path
         WINDOWS_SCRIPT=$(echo "qt/launcher/win/build.bat" | sed 's/\//\\/g')
         echo "Windows script path: $WINDOWS_SCRIPT"
-        cmd.exe //c "set CODESIGN=0 && set NO_COMPRESS=1 && $WINDOWS_SCRIPT"
+
+        # Run the build and capture the exit code
+        if cmd.exe //c "set CODESIGN=0 && set NO_COMPRESS=1 && $WINDOWS_SCRIPT"; then
+          echo "✓ Build completed successfully"
+
+          # Verify the output exists
+          echo "Checking build output..."
+          if [ -f "out/launcher/anki-launcher-setup.exe" ]; then
+            echo "✓ Found installer at: out/launcher/anki-launcher-setup.exe"
+            ls -la out/launcher/anki-launcher-setup.exe
+          elif [ -f "out/launcher/anki-launcher.exe" ]; then
+            echo "✓ Found launcher at: out/launcher/anki-launcher.exe"
+            ls -la out/launcher/anki-launcher.exe
+          else
+            echo "Warning: Could not find expected output files"
+            echo "Contents of out/launcher:"
+            ls -la out/launcher/ || echo "Directory does not exist"
+          fi
+        else
+          echo "✗ Build failed with exit code: $?"
+          echo "Checking for error logs..."
+          if [ -d "out/launcher" ]; then
+            echo "Contents of out/launcher:"
+            ls -la out/launcher/
+          fi
+          exit 1
+        fi
 
     - name: Package Artifacts
       shell: bash
