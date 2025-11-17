@@ -55,19 +55,34 @@ jobs:
           ${{ matrix.platform == 'linux-x86_64' && 'x86_64-unknown-linux-gnu' || '' }}
           ${{ matrix.platform == 'linux-arm64' && 'aarch64-unknown-linux-gnu' || '' }}
           ${{ matrix.platform == 'windows' && 'x86_64-pc-windows-msvc' || '' }}
-          ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin
-          x86_64-apple-darwin' || '' }}
+          ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin x86_64-apple-darwin' || '' }}
 
     - name: Install Linux Dependencies
       if: startsWith(matrix.platform, 'linux')
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          libssl-dev \
-          pkg-config \
-          zstd \
-          tar \
-          patch
+        if [[ "${{ matrix.platform }}" == "linux-x86_64" ]]; then
+          # Install cross-compilation dependencies for ARM64 target
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            libc6-dev-arm64-cross \
+            libssl-dev \
+            libssl-dev:arm64 \
+            pkg-config \
+            zstd \
+            tar \
+            patch
+        else
+          # Native ARM64 build
+          sudo apt-get install -y \
+            libssl-dev \
+            pkg-config \
+            zstd \
+            tar \
+            patch
+        fi
 
     - name: Install macOS Dependencies
       if: matrix.platform == 'macos'
@@ -150,14 +165,25 @@ jobs:
     - name: Build Launcher
       shell: bash
       working-directory: anki-source
+      env:
+        PKG_CONFIG_ALLOW_CROSS: ${{ matrix.platform == 'linux-x86_64' && '1' || '' }}
+        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.platform == 'linux-x86_64' && 'aarch64-linux-gnu-gcc' || '' }}
+        OPENSSL_DIR: ${{ matrix.platform == 'linux-x86_64' && '/usr/lib/aarch64-linux-gnu' || '' }}
+        OPENSSL_LIB_DIR: ${{ matrix.platform == 'linux-x86_64' && '/usr/lib/aarch64-linux-gnu' || '' }}
+        OPENSSL_INCLUDE_DIR: ${{ matrix.platform == 'linux-x86_64' && '/usr/include/openssl' || '' }}
+        PKG_CONFIG_PATH: ${{ matrix.platform == 'linux-x86_64' && '/usr/lib/aarch64-linux-gnu/pkgconfig' || '' }}
+        PKG_CONFIG_SYSROOT_DIR: ${{ matrix.platform == 'linux-x86_64' && '/' || '' }}
+        MACOSX_DEPLOYMENT_TARGET: ${{ matrix.platform == 'macos' && '10.15' || '' }}
+        SDKROOT: ${{ matrix.platform == 'macos' && '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk' || '' }}
+        CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER: ${{ matrix.platform == 'macos' && 'clang' || '' }}
+        CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER: ${{ matrix.platform == 'macos' && 'clang' || '' }}
       run: |
         if [[ "${{ matrix.platform }}" == "windows" ]]; then
           # Set environment variables for Windows build
           export CODESIGN=0
           export NO_COMPRESS=1
-          # Convert forward slashes to backslashes for Windows
-          WINDOWS_SCRIPT=$(echo "${{ matrix.build_script }}" | tr '/' '\')
-          cmd.exe //C ".\$WINDOWS_SCRIPT"
+          # Use PowerShell to execute batch file with proper path handling
+          powershell.exe -Command "& '${{ matrix.build_script }}'"
         else
           # Set NODMG=1 for macOS to skip DMG creation in build script
           if [[ "${{ matrix.platform }}" == "macos" ]]; then
@@ -181,7 +207,13 @@ jobs:
       shell: bash
       run: |
         chmod +x scripts/package-artifacts.sh
-        ./scripts/package-artifacts.sh anki-source ${{ matrix.platform }} ${{ env.ANKI_VERSION }}
+        # Map new platform names to ones expected by package script
+        if [[ "${{ matrix.platform }}" == "linux-x86_64" ]] || [[ "${{ matrix.platform }}" == "linux-arm64" ]]; then
+          PACKAGE_PLATFORM="linux"
+        else
+          PACKAGE_PLATFORM="${{ matrix.platform }}"
+        fi
+        ./scripts/package-artifacts.sh anki-source "$PACKAGE_PLATFORM" ${{ env.ANKI_VERSION }}
 
     - name: Generate Checksums
       shell: bash
