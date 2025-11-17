@@ -154,8 +154,8 @@ jobs:
       run: |
         # Replace the entire Linux build script with a single-architecture version
         cat > qt/launcher/lin/build.sh << 'EOF'
-#!/bin/bash
-set -e
+        #!/bin/bash
+        set -e
 
 # Detect host architecture
 HOST_ARCH=$(uname -m)
