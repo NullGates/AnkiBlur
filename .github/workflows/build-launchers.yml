@@ -167,23 +167,10 @@ jobs:
       shell: bash
       working-directory: anki-source
       run: |
-        # Patch the build_win.rs to use makensis from PATH if not found at hardcoded location
-        cat > qt/launcher/src/bin/build_win_patch.txt << 'EOF'
---- a/qt/launcher/src/bin/build_win.rs
-+++ b/qt/launcher/src/bin/build_win.rs
-@@ -17,7 +17,7 @@ const OUTPUT_DIR: &str = "../../../out/launcher";
- const LAUNCHER_EXE_DIR: &str = "../../../out/launcher_exe";
- const NSIS_DIR: &str = "../../../out/nsis";
- const CARGO_TARGET_DIR: &str = "../../../out/rust";
--const NSIS_PATH: &str = "C:\\Program Files (x86)\\NSIS\\makensis.exe";
-+const NSIS_PATH: &str = "makensis.exe";  // Use from PATH
-
- fn main() -> Result<()> {
-     println!("Building Windows launcher...");
-EOF
-        # Apply the patch if the file exists
+        # Patch the build_win.rs to use makensis from PATH
         if [ -f "qt/launcher/src/bin/build_win.rs" ]; then
           echo "Patching build_win.rs to use makensis from PATH..."
+          # Replace the hardcoded NSIS path with makensis.exe from PATH
           sed -i 's|const NSIS_PATH: &str = "C:\\\\Program Files (x86)\\\\NSIS\\\\makensis.exe";|const NSIS_PATH: \&str = "makensis.exe";|' qt/launcher/src/bin/build_win.rs
           echo "Patch applied successfully"
         fi
