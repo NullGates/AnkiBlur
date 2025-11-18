@@ -35,8 +35,8 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
          Err(e) => {
 diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
 --- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 16:31:32.858703697 +0100
-@@ -0,0 +1,153 @@
++++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 18:36:25.214493350 +0100
+@@ -0,0 +1,156 @@
 +use std::path::{Path, PathBuf};
 +use anki_io::{read_file, write_file, copy_file};
 +use anyhow::{Context, Result};
@@ -146,6 +146,9 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
 +    } else {
 +        patch_path  // No slash found, use as-is
 +    };
++
++    // Strip .venv/ prefix if present (since venv_folder already contains it)
++    let clean_path = clean_path.strip_prefix(".venv/").unwrap_or(clean_path);
 +
 +    // Build the full path relative to venv
 +    let full_path = venv_folder.join(clean_path);
