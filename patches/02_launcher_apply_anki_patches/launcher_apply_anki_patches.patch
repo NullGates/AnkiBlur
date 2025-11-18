@@ -35,8 +35,8 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
          Err(e) => {
 diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
 --- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v1_edit/qt/launcher/src/patch.rs	2025-11-17 15:32:17.490749859 +0100
-@@ -0,0 +1,197 @@
++++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 16:31:32.858703697 +0100
+@@ -0,0 +1,153 @@
 +use std::path::{Path, PathBuf};
 +use anki_io::{read_file, write_file, copy_file};
 +use anyhow::{Context, Result};
@@ -89,60 +89,21 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
 +    let patch_str = String::from_utf8(patch_content)
 +        .context("Patch file contains invalid UTF-8")?;
 +
++    // Note: diffy parses patches as single-file patches
++    // For multi-file patches, we'd need to split them first
++    // Currently our patches (anki_qt_window.patch, anki_branding.patch) are single-file
++
 +    // Parse the patch using diffy
 +    let patch = Patch::from_str(&patch_str)
 +        .context("Failed to parse patch file")?;
 +
-+    // Extract file paths from the patch header and apply to each file
-+    apply_patch_to_files(&patch, &patch_str, venv_folder)?;
++    // Get the target file path from the patch
++    // diffy uses the +++ line (modified) if present, otherwise --- line (original)
++    let target_path = patch.modified()
++        .or_else(|| patch.original())
++        .context("Patch doesn't specify a file path")?;
 +
-+    Ok(())
-+}
-+
-+/// Apply the patch by parsing file paths from the patch content
-+fn apply_patch_to_files(_patch: &Patch<'_, str>, patch_str: &str, venv_folder: &Path) -> Result<()> {
-+    // Parse the patch content to extract individual file patches
-+    let lines: Vec<&str> = patch_str.lines().collect();
-+    let mut current_file: Option<String> = None;
-+    let mut file_patch_lines: Vec<String> = Vec::new();
-+
-+    for line in lines {
-+        if line.starts_with("--- ") {
-+            // If we have a previous file patch, apply it
-+            if let Some(file_path) = &current_file {
-+                if !file_patch_lines.is_empty() {
-+                    apply_file_patch(file_path, &file_patch_lines.join("\n"), venv_folder)?;
-+                }
-+            }
-+
-+            // Start new file patch
-+            current_file = None;
-+            file_patch_lines.clear();
-+            file_patch_lines.push(line.to_string());
-+        } else if line.starts_with("+++ ") {
-+            // Extract the target file path
-+            let target_path = line.strip_prefix("+++ ").unwrap_or("");
-+            current_file = Some(target_path.to_string());
-+            file_patch_lines.push(line.to_string());
-+        } else {
-+            // Add line to current file patch
-+            file_patch_lines.push(line.to_string());
-+        }
-+    }
-+
-+    // Apply the last file patch if exists
-+    if let Some(file_path) = &current_file {
-+        if !file_patch_lines.is_empty() {
-+            apply_file_patch(file_path, &file_patch_lines.join("\n"), venv_folder)?;
-+        }
-+    }
-+
-+    Ok(())
-+}
-+
-+/// Apply patch to a specific file
-+fn apply_file_patch(target_path: &str, patch_content: &str, venv_folder: &Path) -> Result<()> {
-+    // Convert patch path to actual file path in venv
++    // Apply our -p1 path stripping and resolve to venv path
 +    let file_path = resolve_patch_path(target_path, venv_folder)?;
 +
 +    if !file_path.exists() {
@@ -158,38 +119,33 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
 +    let original_str = String::from_utf8(original_content)
 +        .context("Original file contains invalid UTF-8")?;
 +
-+    // Parse and apply just this file's patch
-+    match Patch::from_str(patch_content) {
-+        Ok(file_patch) => {
-+            match apply(&original_str, &file_patch) {
-+                Ok(patched_content) => {
-+                    // Write the patched content
-+                    write_file(&file_path, &patched_content)?;
-+                    println!("Successfully patched: {}", file_path.display());
-+                }
-+                Err(e) => {
-+                    // Restore backup on failure
-+                    copy_file(&backup_path, &file_path)?;
-+                    println!("Failed to apply patch to {}: {}", file_path.display(), e);
-+                    println!("Original file restored from backup.");
-+                }
-+            }
++    // Apply the patch using diffy's apply function
++    match apply(&original_str, &patch) {
++        Ok(patched_content) => {
++            // Write the patched content
++            write_file(&file_path, &patched_content)?;
++            println!("Successfully patched: {}", file_path.display());
 +        }
 +        Err(e) => {
-+            println!("Failed to parse patch for {}: {}", file_path.display(), e);
++            // Restore backup on failure
++            copy_file(&backup_path, &file_path)?;
++            println!("Failed to apply patch to {}: {}", file_path.display(), e);
++            println!("Original file restored from backup.");
 +        }
 +    }
 +
 +    Ok(())
 +}
 +
++
 +/// Resolve patch file path to actual file system path
 +fn resolve_patch_path(patch_path: &str, venv_folder: &Path) -> Result<PathBuf> {
-+    // Remove common patch prefixes like "a/" or "b/"
-+    let clean_path = patch_path
-+        .strip_prefix("a/")
-+        .or_else(|| patch_path.strip_prefix("b/"))
-+        .unwrap_or(patch_path);
++    // Implement -p1: strip first directory component (generic path stripping)
++    let clean_path = if let Some(slash_pos) = patch_path.find('/') {
++        &patch_path[slash_pos + 1..]  // Take everything after first /
++    } else {
++        patch_path  // No slash found, use as-is
++    };
 +
 +    // Build the full path relative to venv
 +    let full_path = venv_folder.join(clean_path);
