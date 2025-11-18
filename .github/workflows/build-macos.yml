@@ -136,6 +136,16 @@ jobs:
         cp ../../../.python-version "$APP_LAUNCHER/Contents/Resources/"
         cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
 
+        # Copy patches directory for runtime patching
+        mkdir -p "$APP_LAUNCHER/Contents/MacOS/patches"
+        [ -f "../../../patches/0B_anki_qt_window/anki_qt_window.patch" ] && \
+            cp ../../../patches/0B_anki_qt_window/anki_qt_window.patch "$APP_LAUNCHER/Contents/MacOS/patches/" || \
+            echo "Warning: anki_qt_window.patch not found"
+        # When anki_branding.patch is created:
+        # [ -f "../../../patches/0A_anki_branding/anki_branding.patch" ] && \
+        #     cp ../../../patches/0A_anki_branding/anki_branding.patch "$APP_LAUNCHER/Contents/MacOS/patches/" || \
+        #     echo "Warning: anki_branding.patch not found"
+
         # Skip codesigning if NODMG is set
         if [ -n "$NODMG" ]; then
             echo "Skipping codesigning and DMG creation (NODMG is set)"

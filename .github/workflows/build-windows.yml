@@ -189,6 +189,18 @@ jobs:
           fi
         done
 
+        # Copy patches directory for runtime patching
+        # The patches will be included in the installer
+        mkdir -p out/launcher/patches
+        [ -f "../patches/0B_anki_qt_window/anki_qt_window.patch" ] && \
+            cp ../patches/0B_anki_qt_window/anki_qt_window.patch out/launcher/patches/ || \
+            echo "Warning: anki_qt_window.patch not found"
+        # When anki_branding.patch is created:
+        # [ -f "../patches/0A_anki_branding/anki_branding.patch" ] && \
+        #     cp ../patches/0A_anki_branding/anki_branding.patch out/launcher/patches/ || \
+        #     echo "Warning: anki_branding.patch not found"
+        echo "Patches directory prepared for inclusion in installer"
+
         # Debug: Show current structure
         echo "Current directory: $(pwd)"
         echo "Build script location: qt/launcher/win/build.bat"

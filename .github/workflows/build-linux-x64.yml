@@ -105,8 +105,10 @@ jobs:
 
         # Copy binaries and support files
         TARGET_DIR=${CARGO_TARGET_DIR:-../../../target}
-        cp "$TARGET_DIR/$RUST_TARGET/release/launcher" "$LAUNCHER_DIR/launcher"
-        cp "../../../out/extracted/uv/uv" "$LAUNCHER_DIR/uv"
+        # Copy launcher with architecture-specific name (expected by anki script)
+        cp "$TARGET_DIR/$RUST_TARGET/release/launcher" "$LAUNCHER_DIR/launcher.amd64"
+        # Copy UV with architecture-specific name
+        cp "../../../out/extracted/uv/uv" "$LAUNCHER_DIR/uv.amd64"
 
         # Copy support files from lin directory
         for file in README.md anki.1 anki.desktop anki.png anki.xml anki.xpm install.sh uninstall.sh anki; do
@@ -118,8 +120,18 @@ jobs:
         [ -f "../../../.python-version" ] && cp ../../../.python-version "$LAUNCHER_DIR/"
         [ -f "../versions.py" ] && cp ../versions.py "$LAUNCHER_DIR/"
 
+        # Copy patches directory for runtime patching
+        mkdir -p "$LAUNCHER_DIR/patches"
+        [ -f "../../../patches/0B_anki_qt_window/anki_qt_window.patch" ] && \
+            cp ../../../patches/0B_anki_qt_window/anki_qt_window.patch "$LAUNCHER_DIR/patches/" || \
+            echo "Warning: anki_qt_window.patch not found"
+        # When anki_branding.patch is created:
+        # [ -f "../../../patches/0A_anki_branding/anki_branding.patch" ] && \
+        #     cp ../../../patches/0A_anki_branding/anki_branding.patch "$LAUNCHER_DIR/patches/" || \
+        #     echo "Warning: anki_branding.patch not found"
+
         # Set executable permissions
-        chmod +x "$LAUNCHER_DIR/launcher" "$LAUNCHER_DIR/uv" "$LAUNCHER_DIR/anki" || true
+        chmod +x "$LAUNCHER_DIR/launcher.amd64" "$LAUNCHER_DIR/uv.amd64" "$LAUNCHER_DIR/anki" || true
         chmod +x "$LAUNCHER_DIR/install.sh" "$LAUNCHER_DIR/uninstall.sh" || true
 
         # Set proper permissions and create tarball
