@@ -1,0 +1,49 @@
+--- originalAnkiProgramFiles/.venv/lib/python3.13/site-packages/aqt/webview.py	2025-11-17 02:05:25.123055648 +0100
++++ v1/.venv/lib/python3.13/site-packages/aqt/webview.py	2025-11-17 02:04:15.013521540 +0100
+@@ -367,8 +367,9 @@
+         self._kind = kind
+         self.set_title(kind.value)
+         self.setPage(AnkiWebPage(self._onBridgeCmd, kind, self))
+-        # reduce flicker
+-        self.page().setBackgroundColor(theme_manager.qcolor(colors.CANVAS))
++        # Set transparent background for full transparency
++        self.page().setBackgroundColor(QColor(0, 0, 0, 0))  # Fully transparent
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+ 
+         # in new code, use .set_bridge_command() instead of setting this directly
+         self.onBridgeCmd: Callable[[str], Any] = self.defaultOnBridgeCmd
+@@ -617,11 +618,11 @@
+         zoom = self.app_zoom_factor()
+ 
+         return f"""
+-body {{ zoom: {zoom}; background-color: var(--canvas); }}
++body {{ zoom: {zoom}; background-color: transparent; }}
+ html {{ {font} }}
+ {button_style}
+-:root {{ --canvas: {colors.CANVAS["light"]} }}
+-:root[class*=night-mode] {{ --canvas: {colors.CANVAS["dark"]} }}
++:root {{ --canvas: transparent }}
++:root[class*=night-mode] {{ --canvas: transparent }}
+ """
+ 
+     def stdHtml(
+@@ -917,8 +918,8 @@
+         self.page().deleteLater()
+ 
+     def on_theme_did_change(self) -> None:
+-        # avoid flashes if page reloaded
+-        self.page().setBackgroundColor(theme_manager.qcolor(colors.CANVAS))
++        # avoid flashes if page reloaded - keep transparent background
++        self.page().setBackgroundColor(QColor(0, 0, 0, 0))  # Keep transparent
+         if hasattr(QWebEngineSettings.WebAttribute, "ForceDarkMode"):
+             force_dark_mode = getattr(QWebEngineSettings.WebAttribute, "ForceDarkMode")
+             page_settings = self.page().settings()
+@@ -962,7 +963,7 @@
+ 
+     @deprecated(info="use theme_manager.qcolor() instead")
+     def get_window_bg_color(self, night_mode: bool | None = None) -> QColor:
+-        return theme_manager.qcolor(colors.CANVAS)
++        return QColor(0, 0, 0, 0)  # Return transparent
+ 
+ 
+ # Pre-configured classes for use in Qt Designer

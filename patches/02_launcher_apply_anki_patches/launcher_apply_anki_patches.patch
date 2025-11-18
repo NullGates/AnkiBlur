@@ -1,4 +1,4 @@
-diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/launcher/Cargo.toml v1_edit/qt/launcher/Cargo.toml
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/Cargo.toml v1_edit/qt/launcher/Cargo.toml
 --- original/qt/launcher/Cargo.toml	2025-11-16 20:09:05.984661252 +0100
 +++ v1_edit/qt/launcher/Cargo.toml	2025-11-16 20:09:48.237641983 +0100
 @@ -14,6 +14,7 @@
@@ -9,7 +9,7 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
  
  [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
  libc.workspace = true
-diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/launcher/src/main.rs v1_edit/qt/launcher/src/main.rs
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/main.rs v1_edit/qt/launcher/src/main.rs
 --- original/qt/launcher/src/main.rs	2025-11-16 20:09:05.986107404 +0100
 +++ v1_edit/qt/launcher/src/main.rs	2025-11-16 20:09:48.237400854 +0100
 @@ -29,6 +29,7 @@
@@ -33,10 +33,10 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
              Ok(())
          }
          Err(e) => {
-diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
 --- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 18:36:25.214493350 +0100
-@@ -0,0 +1,156 @@
++++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 20:53:59.887737519 +0100
+@@ -0,0 +1,159 @@
 +use std::path::{Path, PathBuf};
 +use anki_io::{read_file, write_file, copy_file};
 +use anyhow::{Context, Result};
@@ -54,7 +54,10 @@ diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' original/qt/
 +
 +    // List of patches to apply in order
 +    let patch_files = [
-+        "anki_qt_window.patch",
++        "anki_qt_window_lib_main.patch",
++        "anki_qt_window_lib_webview.patch",
++        "anki_qt_window_lib64_main.patch",
++        "anki_qt_window_lib64_webview.patch",
 +        "anki_branding.patch",
 +    ];
 +
