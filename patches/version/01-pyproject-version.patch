@@ -9,7 +9,7 @@
 +description = "Spaced repetition flashcard program with transparency effects"
  authors = [
 -    { name = "Damien Elmes", email = "dae@ichi2.net" },
-+    { name = "AnkiBlur Team", email = "contact@ankiblur.net" },
++    { name = "NullGates", email = "" },
  ]
  license = { text = "AGPL-3.0-or-later" }
  requires-python = ">=3.9"
