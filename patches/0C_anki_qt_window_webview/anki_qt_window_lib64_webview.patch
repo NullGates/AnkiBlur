@@ -1,5 +1,5 @@
---- originalAnkiProgramFiles/.venv/lib64/python3.13/site-packages/aqt/webview.py	2025-11-17 02:05:25.123055648 +0100
-+++ v1/.venv/lib64/python3.13/site-packages/aqt/webview.py	2025-11-17 02:04:15.013521540 +0100
+--- originalAnkiProgramFiles/.venv/lib64/python3.13/site-packages/aqt/webview.py	2026-01-30 01:11:57.569624344 +0100
++++ v1/.venv/lib64/python3.13/site-packages/aqt/webview.py	2026-01-30 01:11:57.570902189 +0100
 @@ -367,8 +367,9 @@
          self._kind = kind
          self.set_title(kind.value)

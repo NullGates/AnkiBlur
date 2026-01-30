@@ -45,6 +45,20 @@ jobs:
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
 
+    - name: Setup macOS patches
+      run: |
+        # Copy macOS main.py patches to expected location
+        mkdir -p patches/0B_anki_qt_window
+        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib_main.patch \
+           patches/0B_anki_qt_window/
+        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib64_main.patch \
+           patches/0B_anki_qt_window/
+        # Copy shared webview patches
+        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
+           patches/0B_anki_qt_window/
+        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
+           patches/0B_anki_qt_window/
+
     - name: Validate and Apply Patches
       shell: bash
       run: |

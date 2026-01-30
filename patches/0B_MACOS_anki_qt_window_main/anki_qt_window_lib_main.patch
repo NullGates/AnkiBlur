@@ -1,0 +1,74 @@
+--- originalAnkiProgramFiles/.venv/lib/python3.13/site-packages/aqt/main.py	2026-01-30 01:09:23.927361308 +0100
++++ v1/.venv/lib/python3.13/site-packages/aqt/main.py	2026-01-30 01:10:38.341082896 +0100
+@@ -16,6 +16,15 @@
+ from concurrent.futures import Future
+ from typing import Any, Literal, TypeVar, cast
+ 
++# macOS vibrancy support via pyobjc
++try:
++    import objc
++    import Cocoa
++    from ctypes import c_void_p
++    _HAS_PYOBJC = True
++except ImportError:
++    _HAS_PYOBJC = False
++
+ import anki
+ import anki.cards
+ import anki.sound
+@@ -105,6 +114,34 @@
+ T = TypeVar("T")
+ 
+ 
++def _setup_macos_vibrancy(window):
++    """Setup NSVisualEffectView for macOS vibrancy blur effect"""
++    if not _HAS_PYOBJC:
++        print("pyobjc not available, skipping macOS vibrancy setup")
++        return
++    try:
++        view = objc.objc_object(c_void_p=c_void_p(int(window.winId())))
++        nsWindow = view.window()
++
++        frame = Cocoa.NSMakeRect(0, 0, window.width(), window.height())
++        visualEffectView = Cocoa.NSVisualEffectView.new()
++        visualEffectView.setAutoresizingMask_(
++            Cocoa.NSViewWidthSizable | Cocoa.NSViewHeightSizable)
++        visualEffectView.setFrame_(frame)
++        visualEffectView.setState_(Cocoa.NSVisualEffectStateActive)
++        visualEffectView.setMaterial_(Cocoa.NSVisualEffectMaterialPopover)
++        visualEffectView.setBlendingMode_(
++            Cocoa.NSVisualEffectBlendingModeBehindWindow)
++
++        content = nsWindow.contentView()
++        content.addSubview_positioned_relativeTo_(
++            visualEffectView, Cocoa.NSWindowBelow, None)
++        nsWindow.setHasShadow_(True)
++        print("macOS vibrancy setup successful")
++    except Exception as e:
++        print(f"Failed to setup macOS vibrancy: {e}")
++
++
+ class MainWebView(AnkiWebView):
+     def __init__(self, mw: AnkiQt) -> None:
+         AnkiWebView.__init__(self, kind=AnkiWebViewKind.MAIN)
+@@ -192,6 +229,8 @@
+         args: list[Any],
+     ) -> None:
+         QMainWindow.__init__(self)
++        # macOS: transparent background for webview content, keep window decorations
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+         self.backend = backend
+         self.state: MainWindowState = "startup"
+         self.opts = opts
+@@ -959,6 +998,11 @@
+         # main window
+         self.form = aqt.forms.main.Ui_MainWindow()
+         self.form.setupUi(self)
++
++        # macOS vibrancy blur effect
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
++        self.form.centralwidget.setAutoFillBackground(False)
++        _setup_macos_vibrancy(self)
+         # toolbar
+         tweb = self.toolbarWeb = TopWebView(self)
+         self.toolbar = Toolbar(self, tweb)
