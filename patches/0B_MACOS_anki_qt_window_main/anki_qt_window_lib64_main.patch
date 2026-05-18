@@ -1,74 +1,151 @@
---- originalAnkiProgramFiles/.venv/lib64/python3.13/site-packages/aqt/main.py	2026-01-30 01:09:23.927361308 +0100
-+++ v1/.venv/lib64/python3.13/site-packages/aqt/main.py	2026-01-30 01:10:38.341082896 +0100
+--- originalAnkiProgramFiles/.venv/lib64/python3.13/site-packages/aqt/main.py
++++ v1/.venv/lib64/python3.13/site-packages/aqt/main.py
 @@ -16,6 +16,15 @@
  from concurrent.futures import Future
  from typing import Any, Literal, TypeVar, cast
- 
-+# macOS vibrancy support via pyobjc
+
++# macOS vibrancy / glassmorphism support via pyobjc (AnkiBlur)
 +try:
 +    import objc
 +    import Cocoa
-+    from ctypes import c_void_p
 +    _HAS_PYOBJC = True
-+except ImportError:
++except Exception:
 +    _HAS_PYOBJC = False
++
 +
  import anki
  import anki.cards
  import anki.sound
-@@ -105,6 +114,34 @@
+@@ -105,6 +114,101 @@
  T = TypeVar("T")
- 
- 
+
+
++
 +def _setup_macos_vibrancy(window):
-+    """Setup NSVisualEffectView for macOS vibrancy blur effect"""
++    """Apply NSVisualEffectView under the Qt content view (AnkiBlur).
++
++    Strategy (classic macOS vibrancy):
++      * The Qt QMainWindow / central widget are translucent so Qt stops
++        painting an opaque background over the effect view.
++      * The underlying NSWindow gets opaque=NO and clearColor background.
++      * An NSVisualEffectView is inserted as the bottom-most subview of
++        the NSWindow's contentView, providing the actual blur.
++      * The native titlebar (with traffic-light buttons) keeps being
++        drawn by AppKit (titlebarAppearsTransparent stays False).
++
++    Returns True on success, False if pyobjc isn't usable or the
++    NSWindow isn't ready yet; the caller may retry.
++    """
 +    if not _HAS_PYOBJC:
-+        print("pyobjc not available, skipping macOS vibrancy setup")
-+        return
++        print("[AnkiBlur] pyobjc not available, skipping macOS vibrancy")
++        return False
 +    try:
-+        view = objc.objc_object(c_void_p=c_void_p(int(window.winId())))
-+        nsWindow = view.window()
-+
-+        frame = Cocoa.NSMakeRect(0, 0, window.width(), window.height())
-+        visualEffectView = Cocoa.NSVisualEffectView.new()
-+        visualEffectView.setAutoresizingMask_(
-+            Cocoa.NSViewWidthSizable | Cocoa.NSViewHeightSizable)
-+        visualEffectView.setFrame_(frame)
-+        visualEffectView.setState_(Cocoa.NSVisualEffectStateActive)
-+        visualEffectView.setMaterial_(Cocoa.NSVisualEffectMaterialPopover)
-+        visualEffectView.setBlendingMode_(
-+            Cocoa.NSVisualEffectBlendingModeBehindWindow)
-+
-+        content = nsWindow.contentView()
-+        content.addSubview_positioned_relativeTo_(
-+            visualEffectView, Cocoa.NSWindowBelow, None)
-+        nsWindow.setHasShadow_(True)
-+        print("macOS vibrancy setup successful")
++        winid = window.winId()
++        if not winid:
++            return False
++        ns_view = objc.objc_object(c_void_p=int(winid))
++        ns_window = ns_view.window()
++        if ns_window is None:
++            # NSView not yet parented to an NSWindow - retry later.
++            return False
++        content_view = ns_window.contentView()
++        # Idempotent: don't stack a second NSVisualEffectView.
++        for sub in content_view.subviews():
++            if sub.isKindOfClass_(Cocoa.NSVisualEffectView):
++                ns_window.setOpaque_(False)
++                ns_window.setBackgroundColor_(Cocoa.NSColor.clearColor())
++                return True
++        bounds = content_view.bounds()
++        effect_view = Cocoa.NSVisualEffectView.alloc().initWithFrame_(bounds)
++        effect_view.setAutoresizingMask_(
++            Cocoa.NSViewWidthSizable | Cocoa.NSViewHeightSizable
++        )
++        # Classic window-background blur: reads the desktop / windows
++        # behind Anki and blurs them.
++        effect_view.setMaterial_(
++            Cocoa.NSVisualEffectMaterialUnderWindowBackground
++        )
++        effect_view.setBlendingMode_(
++            Cocoa.NSVisualEffectBlendingModeBehindWindow
++        )
++        effect_view.setState_(Cocoa.NSVisualEffectStateActive)
++        # Bottom-most subview so all Qt widgets render on top of it.
++        content_view.addSubview_positioned_relativeTo_(
++            effect_view, Cocoa.NSWindowBelow, None
++        )
++        # Now make the window itself transparent so the effect view is
++        # what shows through. AppKit still draws the titlebar on top.
++        ns_window.setOpaque_(False)
++        ns_window.setBackgroundColor_(Cocoa.NSColor.clearColor())
++        ns_window.setHasShadow_(True)
++        # Keep the standard titlebar (traffic lights + title) opaque.
++        try:
++            ns_window.setTitlebarAppearsTransparent_(False)
++        except Exception:
++            pass
++        print("[AnkiBlur] macOS vibrancy installed")
++        return True
 +    except Exception as e:
-+        print(f"Failed to setup macOS vibrancy: {e}")
++        import traceback
++        print(f"[AnkiBlur] vibrancy setup failed: {e}")
++        traceback.print_exc()
++        return False
++
++
++def _schedule_macos_vibrancy(window):
++    """Retry vibrancy install across a few event-loop ticks.
++
++    winId().window() can be nil very early during init; a handful of
++    QTimer retries covers the common case without blocking startup.
++    """
++    if not _HAS_PYOBJC:
++        return
++    from aqt.qt import QTimer
++    state = {"tries": 0}
++
++    def attempt():
++        if _setup_macos_vibrancy(window):
++            return
++        state["tries"] += 1
++        if state["tries"] < 10:
++            QTimer.singleShot(50, attempt)
++        else:
++            print("[AnkiBlur] giving up on vibrancy after 10 tries")
++
++    QTimer.singleShot(0, attempt)
 +
 +
  class MainWebView(AnkiWebView):
      def __init__(self, mw: AnkiQt) -> None:
          AnkiWebView.__init__(self, kind=AnkiWebViewKind.MAIN)
-@@ -192,6 +229,8 @@
+@@ -192,6 +296,9 @@
          args: list[Any],
      ) -> None:
          QMainWindow.__init__(self)
-+        # macOS: transparent background for webview content, keep window decorations
++        # AnkiBlur (macOS): make the QMainWindow's content paint translucent so
++        # the NSVisualEffectView installed later actually shows through.
 +        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
          self.backend = backend
          self.state: MainWindowState = "startup"
          self.opts = opts
-@@ -959,6 +998,11 @@
+@@ -959,6 +1066,20 @@
          # main window
          self.form = aqt.forms.main.Ui_MainWindow()
          self.form.setupUi(self)
 +
-+        # macOS vibrancy blur effect
++        # AnkiBlur (macOS): keep the central widget & main window
++        # transparent so the NSVisualEffectView is visible behind
++        # the Qt widgets. The native titlebar stays drawn by AppKit.
 +        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
++        self.form.centralwidget.setAttribute(
++            Qt.WidgetAttribute.WA_TranslucentBackground
++        )
 +        self.form.centralwidget.setAutoFillBackground(False)
-+        _setup_macos_vibrancy(self)
++        self.setStyleSheet(
++            "QMainWindow { background: transparent; }"
++            "QMainWindow::separator { background: transparent; }"
++        )
++        _schedule_macos_vibrancy(self)
          # toolbar
          tweb = self.toolbarWeb = TopWebView(self)
          self.toolbar = Toolbar(self, tweb)
