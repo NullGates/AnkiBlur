@@ -147,7 +147,10 @@ process_patch_directory() {
     local patch_files=()
     while IFS= read -r -d '' file; do
         patch_files+=("$file")
-    done < <(find "$patch_dir" -name "*.patch" -type f -print0 | sort -z)
+    # -maxdepth 1: ignore subdirs like archive/ that hold older patch versions
+    # with the same basename (otherwise we'd apply both and the second one
+    # crashes with "Reversed (or previously applied) patch detected").
+    done < <(find "$patch_dir" -maxdepth 1 -name "*.patch" -type f -print0 | sort -z)
 
     if [[ ${#patch_files[@]} -eq 0 ]]; then
         log_warning "No patch files found in: $patch_dir"
