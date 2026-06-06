@@ -97,9 +97,14 @@ jobs:
         # Download UV for Windows
         New-Item -ItemType Directory -Force -Path out\extracted\uv
         Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip" -OutFile "uv-windows.zip"
-        Expand-Archive -Path "uv-windows.zip" -DestinationPath "out\extracted"
-        # Move the uv.exe to the expected location
-        Move-Item -Path "out\extracted\uv.exe" -Destination "out\extracted\uv\uv.exe" -Force
+        # Extract directly into out\extracted\uv so BOTH uv.exe and uvw.exe
+        # (both at the zip root) land where build_win.rs copy_files() expects them.
+        # The previous version extracted to out\extracted and moved ONLY uv.exe,
+        # leaving uvw.exe behind -> build_win.exe failed copying uv\uvw.exe.
+        Expand-Archive -Path "uv-windows.zip" -DestinationPath "out\extracted\uv" -Force
+        # Fail loudly here (clear message) instead of a cryptic os error 2 later
+        if (-not (Test-Path "out\extracted\uv\uv.exe"))  { throw "uv.exe missing after extract" }
+        if (-not (Test-Path "out\extracted\uv\uvw.exe")) { throw "uvw.exe missing after extract" }
 
     - name: Copy NSIS Plugins
       shell: bash
@@ -227,12 +232,15 @@ jobs:
 
         # Run the Windows build script
         echo "Running build script..."
-        # Convert Unix path to Windows path
-        WINDOWS_SCRIPT=$(echo "qt/launcher/win/build.bat" | sed 's/\//\\/g')
-        echo "Windows script path: $WINDOWS_SCRIPT"
+        # build_win.rs anchors ALL its relative paths (../../../.version, uv.exe,
+        # pyproject.toml, out/extracted/...) to qt/launcher/win, so build.bat MUST
+        # run with that as the working directory. build.bat is just
+        # `cargo run --bin build_win` and does not cd itself, so we cd here.
+        # (Previously build.bat ran from anki-source, making ../../../.version
+        # resolve two levels too high -> "os error 2".)
 
         # Run the build and capture the exit code
-        if cmd.exe //c "set CODESIGN=0 && set NO_COMPRESS=1 && $WINDOWS_SCRIPT"; then
+        if cmd.exe //c "cd qt\launcher\win && set CODESIGN=0 && set NO_COMPRESS=1 && build.bat"; then
           echo "✓ Build completed successfully"
 
           # Verify the output exists
