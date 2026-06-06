@@ -41,7 +41,8 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +                        "  \"pyqt6_sip==13.6.0\",\n",
 +                        "  \"pyobjc-core; sys_platform == 'darwin'\",\n",
 +                        "  \"pyobjc-framework-Cocoa; sys_platform == 'darwin'\",\n",
-+                        "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'"
++                        "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'\",\n",
++                        "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin'"
                      ),
                      version
                  ),
@@ -57,7 +58,8 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +                    "  \"aqt=={}\",\n",
 +                    "  \"pyobjc-core; sys_platform == 'darwin'\",\n",
 +                    "  \"pyobjc-framework-Cocoa; sys_platform == 'darwin'\",\n",
-+                    "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'"
++                    "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'\",\n",
++                    "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin'"
 +                ),
 +                version, version, version
 +            ),

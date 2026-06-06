@@ -1,154 +1,175 @@
 --- originalAnkiProgramFiles/.venv/lib/python3.13/site-packages/aqt/main.py
 +++ v1/.venv/lib/python3.13/site-packages/aqt/main.py
-@@ -16,6 +16,15 @@
+@@ -16,6 +16,14 @@
  from concurrent.futures import Future
  from typing import Any, Literal, TypeVar, cast
  
-+# macOS vibrancy / glassmorphism support via pyobjc (AnkiBlur)
++# macOS Liquid Glass support via pyqt-liquidglass (AnkiBlur)
 +try:
-+    import objc
-+    import Cocoa
-+    _HAS_PYOBJC = True
++    import pyqt_liquidglass as _ankiblur_glass
++    _HAS_LIQUID_GLASS = True
 +except Exception:
-+    _HAS_PYOBJC = False
++    _HAS_LIQUID_GLASS = False
 +
 +
  import anki
  import anki.cards
  import anki.sound
-@@ -105,6 +114,104 @@
+@@ -105,6 +113,138 @@
  T = TypeVar("T")
  
  
 +
-+def _setup_macos_vibrancy(window):
-+    """Apply NSVisualEffectView under the Qt content view (AnkiBlur).
++def _ankiblur_setup_glass(window):
++    """Apply macOS Liquid Glass to the AnkiQt main window (AnkiBlur).
 +
-+    Strategy (classic macOS vibrancy):
-+      * The Qt QMainWindow / central widget are translucent so Qt stops
-+        painting an opaque background over the effect view.
-+      * The underlying NSWindow gets opaque=NO and clearColor background.
-+      * An NSVisualEffectView is inserted as the bottom-most subview of
-+        the NSWindow's contentView, providing the actual blur.
-+      * The native titlebar (with traffic-light buttons) keeps being
-+        drawn by AppKit (titlebarAppearsTransparent stays False).
-+
-+    Returns True on success, False if pyobjc isn't usable or the
-+    NSWindow isn't ready yet; the caller may retry.
++    Strategy (works around the Qt6 + QWebEngineView translucent compositor
++    bug on macOS):
++      * pyqt-liquidglass injects an NSGlassEffectView (macOS 26+) or an
++        NSVisualEffectView fallback as a sibling BEHIND the Qt root view
++        in the NSThemeFrame. This avoids "Compositor returned null
++        texture" that plagues every approach that goes through Qt's
++        own translucent compositing path on QWebEngineView children.
++      * On macOS 26+, additional NSGlassEffectView properties (style,
++        scrim, tint, appearance, etc.) are controllable via env vars
++        listed in _ankiblur_configure_glass below.
 +    """
-+    if not _HAS_PYOBJC:
-+        print("[AnkiBlur] pyobjc not available, skipping macOS vibrancy")
-+        return False
-+    try:
-+        winid = window.winId()
-+        if not winid:
-+            return False
-+        ns_view = objc.objc_object(c_void_p=int(winid))
-+        ns_window = ns_view.window()
-+        if ns_window is None:
-+            # NSView not yet parented to an NSWindow - retry later.
-+            return False
-+        content_view = ns_window.contentView()
-+        # Idempotent: don't stack a second NSVisualEffectView.
-+        for sub in content_view.subviews():
-+            if sub.isKindOfClass_(Cocoa.NSVisualEffectView):
-+                ns_window.setOpaque_(False)
-+                ns_window.setBackgroundColor_(Cocoa.NSColor.clearColor())
-+                return True
-+        bounds = content_view.bounds()
-+        effect_view = Cocoa.NSVisualEffectView.alloc().initWithFrame_(bounds)
-+        effect_view.setAutoresizingMask_(
-+            Cocoa.NSViewWidthSizable | Cocoa.NSViewHeightSizable
-+        )
-+        # Classic window-background blur: reads the desktop / windows
-+        # behind Anki and blurs them. WindowBackground is the standard
-+        # macOS app material (subtle blur + adaptive light/dark tint).
-+        # The ankiblur_background_theme addon controls the additional
-+        # color overlay on top of the webview HTML.
-+        effect_view.setMaterial_(
-+            Cocoa.NSVisualEffectMaterialWindowBackground
-+        )
-+        effect_view.setBlendingMode_(
-+            Cocoa.NSVisualEffectBlendingModeBehindWindow
-+        )
-+        effect_view.setState_(Cocoa.NSVisualEffectStateActive)
-+        # Bottom-most subview so all Qt widgets render on top of it.
-+        content_view.addSubview_positioned_relativeTo_(
-+            effect_view, Cocoa.NSWindowBelow, None
-+        )
-+        # Now make the window itself transparent so the effect view is
-+        # what shows through. AppKit still draws the titlebar on top.
-+        ns_window.setOpaque_(False)
-+        ns_window.setBackgroundColor_(Cocoa.NSColor.clearColor())
-+        ns_window.setHasShadow_(True)
-+        # Keep the standard titlebar (traffic lights + title) opaque.
-+        try:
-+            ns_window.setTitlebarAppearsTransparent_(False)
-+        except Exception:
-+            pass
-+        print("[AnkiBlur] macOS vibrancy installed")
-+        return True
-+    except Exception as e:
-+        import traceback
-+        print(f"[AnkiBlur] vibrancy setup failed: {e}")
-+        traceback.print_exc()
-+        return False
-+
-+
-+def _schedule_macos_vibrancy(window):
-+    """Retry vibrancy install across a few event-loop ticks.
-+
-+    winId().window() can be nil very early during init; a handful of
-+    QTimer retries covers the common case without blocking startup.
-+    """
-+    if not _HAS_PYOBJC:
++    if not _HAS_LIQUID_GLASS:
++        print("[AnkiBlur] pyqt-liquidglass not available, no glass effect")
 +        return
++    # The Qt content view must be translucent so the NSVisualEffectView /
++    # NSGlassEffectView under it (in the NSThemeFrame) shows through. The
++    # lib also sets this internally inside prepare_window_for_glass; we
++    # set it early as defense in depth.
++    window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 +    from aqt.qt import QTimer
 +    state = {"tries": 0}
 +
 +    def attempt():
-+        if _setup_macos_vibrancy(window):
-+            return
++        try:
++            # Use the WindowBackground material for the NSVisualEffectView
++            # fallback (older macOS). On macOS 26+ NSGlassEffectView is used
++            # and material is ignored; tune via setStyle_ env var instead.
++            try:
++                from pyqt_liquidglass import GlassMaterial, GlassOptions
++                opts = GlassOptions(material=GlassMaterial.WINDOW_BACKGROUND)
++            except Exception:
++                opts = None
++            effect_id = _ankiblur_glass.apply_glass_to_window(window, opts)
++            if effect_id is not None:
++                print(f"[AnkiBlur] liquid glass applied (id={effect_id})")
++                _ankiblur_configure_glass(window)
++                return
++            else:
++                print("[AnkiBlur] glass apply returned None")
++        except Exception as e:
++            import traceback
++            print(f"[AnkiBlur] glass apply failed: {e}")
++            traceback.print_exc()
 +        state["tries"] += 1
-+        if state["tries"] < 10:
-+            QTimer.singleShot(50, attempt)
++        if state["tries"] < 15:
++            QTimer.singleShot(100, attempt)
 +        else:
-+            print("[AnkiBlur] giving up on vibrancy after 10 tries")
++            print("[AnkiBlur] giving up after 15 retries")
 +
-+    QTimer.singleShot(0, attempt)
++    # 150ms lets Anki finish its own .show() before we touch the NSWindow.
++    QTimer.singleShot(150, attempt)
++
++
++def _ankiblur_configure_glass(window):
++    """Apply env-var-controlled tuning to the NSGlassEffectView.
++
++    Env vars (all optional, all live across restarts of Anki):
++
++        ANKIBLUR_STYLE        int   0=Regular 1=Clear 2=Frosted 3=Chromatic
++                                    (macOS 26+ NSGlassEffectView)
++        ANKIBLUR_SUBVARIANT   int   private subvariant fine-tune
++        ANKIBLUR_SCRIM        int   0=Off 1=Subdued 2=Normal
++        ANKIBLUR_LENSING      1/0   content-lensing effect
++        ANKIBLUR_TINT         hex   tint color, e.g. #80808026 (gray @ 15% alpha)
++                                    accepts #RRGGBB or #RRGGBBAA
++        ANKIBLUR_APPEARANCE   str   NSAppearanceNameAqua to force light glass
++                                    even when the system is in dark mode
++                                    (mitigates Apple's dark-mode saturation
++                                    boost which is otherwise unreachable on
++                                    NSGlassEffectView)
++    """
++    if not _HAS_LIQUID_GLASS:
++        return
++    try:
++        import os
++        gv = window._glass_view
++        if (v := os.environ.get("ANKIBLUR_STYLE")) is not None:
++            try:
++                gv.setStyle_(int(v))
++                print(f"[AnkiBlur] setStyle_({v})")
++            except Exception as e:
++                print(f"[AnkiBlur] setStyle_ failed: {e}")
++        if (v := os.environ.get("ANKIBLUR_SUBVARIANT")) is not None:
++            try:
++                gv.set_subvariant_(int(v))
++                print(f"[AnkiBlur] set_subvariant_({v})")
++            except Exception as e:
++                print(f"[AnkiBlur] set_subvariant_ failed: {e}")
++        if (v := os.environ.get("ANKIBLUR_SCRIM")) is not None:
++            try:
++                gv.set_scrimState_(int(v))
++                print(f"[AnkiBlur] set_scrimState_({v})")
++            except Exception as e:
++                print(f"[AnkiBlur] set_scrimState_ failed: {e}")
++        if (v := os.environ.get("ANKIBLUR_LENSING")) is not None:
++            try:
++                gv.set_contentLensing_(bool(int(v)))
++                print(f"[AnkiBlur] set_contentLensing_({bool(int(v))})")
++            except Exception as e:
++                print(f"[AnkiBlur] set_contentLensing_ failed: {e}")
++        if (v := os.environ.get("ANKIBLUR_APPEARANCE")) is not None:
++            try:
++                from AppKit import NSAppearance
++                na = NSAppearance.appearanceNamed_(v)
++                if na is not None:
++                    gv.setAppearance_(na)
++                    print(f"[AnkiBlur] setAppearance_({v})")
++            except Exception as e:
++                print(f"[AnkiBlur] setAppearance_ failed: {e}")
++        if (v := os.environ.get("ANKIBLUR_TINT")) is not None:
++            try:
++                from AppKit import NSColor
++                h = v.lstrip("#")
++                if len(h) == 6:
++                    h += "ff"
++                r, g, b, a = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4, 6))
++                gv.setTintColor_(
++                    NSColor.colorWithRed_green_blue_alpha_(r, g, b, a)
++                )
++                print(f"[AnkiBlur] setTintColor_({v})")
++            except Exception as e:
++                print(f"[AnkiBlur] setTintColor_ failed: {e}")
++    except Exception as e:
++        import traceback
++        print(f"[AnkiBlur] glass configure failed: {e}")
++        traceback.print_exc()
 +
 +
  class MainWebView(AnkiWebView):
      def __init__(self, mw: AnkiQt) -> None:
          AnkiWebView.__init__(self, kind=AnkiWebViewKind.MAIN)
-@@ -192,6 +299,9 @@
-         args: list[Any],
-     ) -> None:
-         QMainWindow.__init__(self)
-+        # AnkiBlur (macOS): make the QMainWindow's content paint translucent so
-+        # the NSVisualEffectView installed later actually shows through.
-+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-         self.backend = backend
-         self.state: MainWindowState = "startup"
-         self.opts = opts
-@@ -959,6 +1069,20 @@
+@@ -959,6 +1099,18 @@
          # main window
          self.form = aqt.forms.main.Ui_MainWindow()
          self.form.setupUi(self)
 +
-+        # AnkiBlur (macOS): keep the central widget & main window
-+        # transparent so the NSVisualEffectView is visible behind
-+        # the Qt widgets. The native titlebar stays drawn by AppKit.
-+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-+        self.form.centralwidget.setAttribute(
-+            Qt.WidgetAttribute.WA_TranslucentBackground
-+        )
-+        self.form.centralwidget.setAutoFillBackground(False)
-+        self.setStyleSheet(
-+            "QMainWindow { background: transparent; }"
-+            "QMainWindow::separator { background: transparent; }"
-+        )
-+        _schedule_macos_vibrancy(self)
++        # AnkiBlur (macOS): tell Qt NOT to autofill the centralwidget's
++        # background. Without this the centralwidget paints opaque on
++        # macOS even with WA_TranslucentBackground set, masking the
++        # NSVisualEffectView/NSGlassEffectView underneath.
++        if hasattr(self.form, 'centralwidget'):
++            self.form.centralwidget.setAutoFillBackground(False)
++        # AnkiBlur (macOS): apply Liquid Glass via pyqt-liquidglass.
++        # The lib injects the effect view as a sibling behind Qt's
++        # root view in the NSThemeFrame, which keeps the QWebEngineView
++        # compositor working (no 'Compositor returned null texture').
++        _ankiblur_setup_glass(self)
          # toolbar
          tweb = self.toolbarWeb = TopWebView(self)
          self.toolbar = Toolbar(self, tweb)
