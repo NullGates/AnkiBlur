@@ -62,16 +62,15 @@ jobs:
     - name: Setup Windows patches
       shell: bash
       run: |
-        # Copy Linux main.py patches (same transparency approach works on Windows)
+        # Copy Windows-specific window patches (native DWM acrylic blur via pywinstyles).
+        # Windows venvs use a single Lib\site-packages layout (no lib64, no python3.13),
+        # so these patches carry Windows paths and only the "lib" variant exists. The
+        # webview patch is the shared transparency change re-pathed for Windows. The
+        # launcher's runtime patcher will log "not found" for the lib64 names (expected).
         mkdir -p patches/0B_anki_qt_window
-        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib_main.patch \
+        cp patches/0B_WINDOWS_anki_qt_window_main/anki_qt_window_lib_main.patch \
            patches/0B_anki_qt_window/
-        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib64_main.patch \
-           patches/0B_anki_qt_window/
-        # Copy shared webview patches
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
+        cp patches/0B_WINDOWS_anki_qt_window_main/anki_qt_window_lib_webview.patch \
            patches/0B_anki_qt_window/
 
     - name: Validate and Apply Patches

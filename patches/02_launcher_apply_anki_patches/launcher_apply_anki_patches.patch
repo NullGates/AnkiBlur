@@ -33,7 +33,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
              Ok(())
          }
          Err(e) => {
-@@ -738,7 +745,11 @@
+@@ -738,7 +745,12 @@
                          "  \"pyqt6-qt6==6.6.2\",\n",
                          "  \"pyqt6-webengine==6.6.0\",\n",
                          "  \"pyqt6-webengine-qt6==6.6.2\",\n",
@@ -42,11 +42,12 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +                        "  \"pyobjc-core; sys_platform == 'darwin'\",\n",
 +                        "  \"pyobjc-framework-Cocoa; sys_platform == 'darwin'\",\n",
 +                        "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'\",\n",
-+                        "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin'"
++                        "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin'\",\n",
++                        "  \"pywinstyles==1.8; sys_platform == 'win32'"
                      ),
                      version
                  ),
-@@ -746,7 +757,18 @@
+@@ -746,7 +758,19 @@
          }
          VersionKind::Uv(version) => content_str.replace(
              "anki-release",
@@ -59,7 +60,8 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +                    "  \"pyobjc-core; sys_platform == 'darwin'\",\n",
 +                    "  \"pyobjc-framework-Cocoa; sys_platform == 'darwin'\",\n",
 +                    "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'\",\n",
-+                    "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin'"
++                    "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin'\",\n",
++                    "  \"pywinstyles==1.8; sys_platform == 'win32'"
 +                ),
 +                version, version, version
 +            ),
