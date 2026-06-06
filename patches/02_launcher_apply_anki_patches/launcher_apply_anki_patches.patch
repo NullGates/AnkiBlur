@@ -33,7 +33,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
              Ok(())
          }
          Err(e) => {
-@@ -738,7 +745,10 @@
+@@ -738,7 +745,11 @@
                          "  \"pyqt6-qt6==6.6.2\",\n",
                          "  \"pyqt6-webengine==6.6.0\",\n",
                          "  \"pyqt6-webengine-qt6==6.6.2\",\n",
@@ -46,7 +46,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
                      ),
                      version
                  ),
-@@ -746,7 +756,17 @@
+@@ -746,7 +757,18 @@
          }
          VersionKind::Uv(version) => content_str.replace(
              "anki-release",
@@ -69,7 +69,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
 --- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
 +++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 20:53:59.887737519 +0100
-@@ -0,0 +1,159 @@
+@@ -0,0 +0,159 @@
 +use std::path::{Path, PathBuf};
 +use anki_io::{read_file, write_file, copy_file};
 +use anyhow::{Context, Result};
