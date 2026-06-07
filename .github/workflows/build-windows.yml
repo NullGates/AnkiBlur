@@ -239,8 +239,13 @@ jobs:
         # (Previously build.bat ran from anki-source, making ../../../.version
         # resolve two levels too high -> "os error 2".)
 
-        # Run the build and capture the exit code
-        if cmd.exe //c "cd qt\launcher\win && set CODESIGN=0 && set NO_COMPRESS=1 && build.bat"; then
+        # Run the build and capture the exit code.
+        # build.bat derives CODESIGN/NO_COMPRESS from %NOCOMP% itself:
+        #   if "%NOCOMP%"=="1" ( CODESIGN=0 & NO_COMPRESS=1 ) else ( CODESIGN=1 & ... )
+        # so setting CODESIGN/NO_COMPRESS directly was clobbered -> CODESIGN=1 ->
+        # build_win.exe signed with the arm64 signtool on x64 -> "os error 216".
+        # Pass NOCOMP=1 to take the no-sign / no-compress branch.
+        if cmd.exe //c "cd qt\launcher\win && set NOCOMP=1 && build.bat"; then
           echo "✓ Build completed successfully"
 
           # Verify the output exists
