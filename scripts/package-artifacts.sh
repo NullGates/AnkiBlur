@@ -202,8 +202,11 @@ package_macos() {
 package_windows() {
     log_info "Packaging Windows artifacts..."
 
-    # Look for Windows installer in multiple possible locations
+    # Look for Windows installer in multiple possible locations.
+    # build_win.rs writes it to out/launcher_exe/ (LAUNCHER_EXE_DIR) -- that is
+    # the canonical location; the others are legacy fallbacks.
     local installer_locations=(
+        "$ANKI_SOURCE/out/launcher_exe/anki-launcher-$VERSION-windows.exe"
         "$ANKI_SOURCE/out/launcher/anki-launcher-$VERSION-windows.exe"
         "$ANKI_SOURCE/out/anki-launcher-$VERSION-windows.exe"
         "$ANKI_SOURCE/qt/launcher/win/anki-launcher-$VERSION-windows.exe"

@@ -297,7 +297,9 @@ jobs:
       shell: bash
       run: |
         cd artifacts
-        certUtil -hashfile anki-launcher-windows.exe SHA256 > anki-launcher-windows.exe.sha256
+        # package-artifacts.sh writes the installer with the version in its name
+        # (anki-launcher-<version>-windows.exe), so the checksum must match that.
+        certUtil -hashfile "anki-launcher-${{ env.ANKI_VERSION }}-windows.exe" SHA256 > "anki-launcher-${{ env.ANKI_VERSION }}-windows.exe.sha256"
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
