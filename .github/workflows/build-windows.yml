@@ -156,6 +156,20 @@ jobs:
         # dependency on PATH surviving bash -> cmd -> cargo -> build_win.)
         grep -n "NSIS_PATH" "$SRC"
 
+        # --- Track the runtime patches dir in the uninstall manifest ---
+        # generate_install_manifest() only walks out/launcher top-level files, so
+        # the $INSTDIR\patches we add (from out/ab_patches) is never listed and a
+        # full uninstall would leave it behind. Append the dir + its files to the
+        # manifest. Order matters: removeManifestFiles in the NSIS template pops
+        # lines in reverse, so the dir entry must come BEFORE its files (files are
+        # deleted first, then the now-empty dir is RMDir-removed).
+        perl -0777 -pi -e 's{^(    write_file\(output_dir\.join\("anki\.install-manifest"\), manifest_content\)\?;)$}{    // AnkiBlur: also track the runtime patches dir so uninstall removes it.\n    // Dir entry first: removeManifestFiles pops in reverse, so the .patch\n    // files are deleted before the now-empty patches dir is RMDir-removed.\n    manifest_content.push_str("patches\\r\\n");\n    manifest_content.push_str("patches\\\\anki_qt_window_lib_main.patch\\r\\n");\n    manifest_content.push_str("patches\\\\anki_qt_window_lib_webview.patch\\r\\n");\n$1}m' "$SRC"
+        if ! grep -q 'push_str("patches' "$SRC"; then
+          echo "ERROR: failed to add patches to install manifest in $SRC (anchor not found?)"; exit 1
+        fi
+        echo "✓ Patches tracked in uninstall manifest:"
+        grep -n 'push_str("patches' "$SRC"
+
         # --- Make the NSIS installer ship the runtime blur patches ---
         # build_win.exe wipes out/launcher before packaging, and the template's
         # `File /r ..\launcher\*.*` would not recurse a dot-less `patches` subdir
