@@ -127,22 +127,34 @@ jobs:
           exit 1
         fi
 
-    - name: Patch Build Scripts for NSIS Path
+    - name: Patch Build Scripts (disable code signing)
       shell: bash
       working-directory: anki-source
       run: |
-        # Patch the build_win.rs to use makensis from PATH
-        if [ -f "qt/launcher/src/bin/build_win.rs" ]; then
-          echo "Patching build_win.rs to use makensis from PATH..."
-          # Read the file, replace the NSIS path, and write it back
-          cp qt/launcher/src/bin/build_win.rs qt/launcher/src/bin/build_win.rs.bak
-          # Use a simpler approach: replace the specific line
-          cat qt/launcher/src/bin/build_win.rs.bak | \
-            sed 's/const NSIS_PATH: &str = "C:[^"]*makensis\.exe";/const NSIS_PATH: \&str = "makensis.exe";/' \
-            > qt/launcher/src/bin/build_win.rs
-          echo "Patch applied. Checking changes:"
-          grep "NSIS_PATH" qt/launcher/src/bin/build_win.rs
+        SRC="qt/launcher/src/bin/build_win.rs"
+        # AnkiBlur ships UNSIGNED. Two reasons signing can never work here:
+        #   1. We have no Ankitects code-signing certificate (the hardcoded
+        #      /sha1 thumbprint in build_win.rs is theirs, not in our store).
+        #   2. find_signtool() is hardcoded to the *arm64* signtool, which cannot
+        #      execute on the x64 runner -> "os error 216".
+        # So force sign_file() to always take its early-return skip path by
+        # neutralizing the CODESIGN read. This is a code-level invariant
+        # (AnkiBlur never signs), independent of any environment variable.
+        sed -i 's|let codesign = env::var("CODESIGN").unwrap_or_default();|let codesign = String::new(); /* AnkiBlur: never sign */|' "$SRC"
+        # Fail LOUDLY if the source drifted and the patch did not apply, instead
+        # of silently falling through to a signing attempt (which is exactly how
+        # the previous os-error-216 failures slipped past).
+        if grep -q 'env::var("CODESIGN")' "$SRC"; then
+          echo "ERROR: failed to neutralize code signing in $SRC (source changed?)"; exit 1
         fi
+        echo "✓ Code signing neutralized:"
+        grep -n "let codesign" "$SRC"
+        # NSIS_PATH is intentionally left at its original hardcoded value,
+        # C:\Program Files (x86)\NSIS\makensis.exe -- exactly where
+        # 'choco install nsis' places makensis on the runner. (Previously this
+        # step rewrote it to PATH-relative "makensis.exe", an unnecessary
+        # dependency on PATH surviving bash -> cmd -> cargo -> build_win.)
+        grep -n "NSIS_PATH" "$SRC"
 
     - name: Build Launcher
       shell: bash
@@ -150,9 +162,14 @@ jobs:
       run: |
         echo "Building Windows launcher..."
 
-        # Set environment variables for Windows build
-        export CODESIGN=0
-        export NO_COMPRESS=1
+        # Signing is hard-disabled via the build_win.rs patch above. We still
+        # export NOCOMP=1 so build.bat's own logic also sets CODESIGN=0
+        # (belt-and-suspenders) and NO_COMPRESS=1 (skips LZMA -> faster NSIS build).
+        # IMPORTANT: set it in the bash env and let cmd.exe INHERIT it. Do NOT use
+        # an inline `set NOCOMP=1 && ...` inside cmd.exe -- cmd splits on `&&` and
+        # captures the trailing space into the value ("1 " != "1"), which makes
+        # build.bat take its else branch and silently re-enable signing.
+        export NOCOMP=1
 
         # Add NSIS to PATH
         echo "Setting up NSIS in PATH..."
@@ -239,13 +256,11 @@ jobs:
         # (Previously build.bat ran from anki-source, making ../../../.version
         # resolve two levels too high -> "os error 2".)
 
-        # Run the build and capture the exit code.
-        # build.bat derives CODESIGN/NO_COMPRESS from %NOCOMP% itself:
-        #   if "%NOCOMP%"=="1" ( CODESIGN=0 & NO_COMPRESS=1 ) else ( CODESIGN=1 & ... )
-        # so setting CODESIGN/NO_COMPRESS directly was clobbered -> CODESIGN=1 ->
-        # build_win.exe signed with the arm64 signtool on x64 -> "os error 216".
-        # Pass NOCOMP=1 to take the no-sign / no-compress branch.
-        if cmd.exe //c "cd qt\launcher\win && set NOCOMP=1 && build.bat"; then
+        # Run the build and capture the exit code. build.bat reads %NOCOMP% from
+        # the environment we exported above (inherited cleanly by cmd.exe, no
+        # trailing space) -> CODESIGN=0, NO_COMPRESS=1. Signing is additionally
+        # hard-disabled in build_win.rs, so it never runs regardless.
+        if cmd.exe //c "cd qt\launcher\win && build.bat"; then
           echo "✓ Build completed successfully"
 
           # Verify the output exists
