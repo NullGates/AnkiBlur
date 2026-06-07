@@ -127,7 +127,7 @@ jobs:
           exit 1
         fi
 
-    - name: Patch Build Scripts (disable code signing)
+    - name: Patch Build Scripts (disable signing, install patches)
       shell: bash
       working-directory: anki-source
       run: |
@@ -155,6 +155,21 @@ jobs:
         # step rewrote it to PATH-relative "makensis.exe", an unnecessary
         # dependency on PATH surviving bash -> cmd -> cargo -> build_win.)
         grep -n "NSIS_PATH" "$SRC"
+
+        # --- Make the NSIS installer ship the runtime blur patches ---
+        # build_win.exe wipes out/launcher before packaging, and the template's
+        # `File /r ..\launcher\*.*` would not recurse a dot-less `patches` subdir
+        # anyway. So inject an explicit install of our staged patches (see the
+        # out/ab_patches staging in the Build Launcher step) into $INSTDIR\patches,
+        # which is exactly where the launcher's patch.rs looks (<exe_dir>\patches).
+        NSI="qt/launcher/win/anki.template.nsi"
+        perl -0777 -pi -e 's{^  File /r \.\.\\launcher\\\*\.\*$}{  File /r ..\\launcher\\*.*\n  ; AnkiBlur: install runtime blur patches into \$INSTDIR\\patches so the\n  ; launcher (patch.rs looks in <exe_dir>\\patches) finds and applies them.\n  SetOutPath "\$INSTDIR\\patches"\n  File /nonfatal "..\\ab_patches\\*.patch"\n  SetOutPath "\$INSTDIR"}m' "$NSI"
+        # Fail loudly if the anchor was not found (template drifted upstream).
+        if ! grep -q "ab_patches" "$NSI"; then
+          echo "ERROR: failed to inject patches install into $NSI (File /r anchor not found?)"; exit 1
+        fi
+        echo "✓ NSIS template now installs runtime patches:"
+        grep -n "ab_patches" "$NSI"
 
     - name: Build Launcher
       shell: bash
@@ -225,23 +240,26 @@ jobs:
           fi
         done
 
-        # Copy patches directory for runtime patching
-        # The patches will be included in the installer
-        mkdir -p out/launcher/patches
-
-        # Copy all anki_qt_window patches
+        # Stage runtime blur patches where the installer can package them.
+        # CRITICAL: build_win.exe runs setup_directories() which removes
+        # out/launcher (and out/launcher_exe, out/nsis) at the START of its run,
+        # so anything staged under out/launcher is deleted before the installer
+        # is built. Stage into a SIBLING dir it never touches; the patched NSIS
+        # template (see "Patch Build Scripts" step) installs these into
+        # $INSTDIR\patches, where the launcher's patch.rs (<exe_dir>\patches)
+        # looks. lib64 variants don't exist for Windows (single Lib layout) --
+        # their absence is expected, not an error.
+        mkdir -p out/ab_patches
         for patch in anki_qt_window_lib_main.patch anki_qt_window_lib_webview.patch \
                      anki_qt_window_lib64_main.patch anki_qt_window_lib64_webview.patch; do
-            [ -f "../patches/0B_anki_qt_window/$patch" ] && \
-                cp "../patches/0B_anki_qt_window/$patch" out/launcher/patches/ || \
-                echo "Warning: $patch not found"
+            if [ -f "../patches/0B_anki_qt_window/$patch" ]; then
+                cp "../patches/0B_anki_qt_window/$patch" out/ab_patches/ && echo "Staged: $patch"
+            else
+                echo "Note: $patch not present (expected for Windows lib64 variants)"
+            fi
         done
-
-        # When anki_branding.patch is created:
-        # [ -f "../patches/0A_anki_branding/anki_branding.patch" ] && \
-        #     cp ../patches/0A_anki_branding/anki_branding.patch out/launcher/patches/ || \
-        #     echo "Warning: anki_branding.patch not found"
-        echo "Patches directory prepared for inclusion in installer"
+        echo "Runtime patches staged in out/ab_patches:"
+        ls -la out/ab_patches/
 
         # Debug: Show current structure
         echo "Current directory: $(pwd)"
