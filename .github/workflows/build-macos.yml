@@ -204,6 +204,22 @@ jobs:
         cd qt/launcher/mac
         ./build.sh
 
+    - name: Free disk space before packaging
+      working-directory: anki-source
+      run: |
+        # The launcher build (Rust compiled for BOTH apple-darwin targets, plus
+        # the ./ninja bootstrap) fills the small macOS runner disk, so hdiutil
+        # was failing with "No space left on device" when writing the DMG. The
+        # universal binary and uv are already baked into Anki.app, so every one
+        # of these build intermediates is safe to drop before packaging.
+        echo "Disk before cleanup:"; df -h .
+        rm -rf target || true
+        # keep out/launcher (Anki.app); drop the other ninja/build outputs
+        find out -mindepth 1 -maxdepth 1 ! -name launcher -exec rm -rf {} + 2>/dev/null || true
+        rm -rf uv-*.tar.gz uv-x86_64-apple-darwin uv-aarch64-apple-darwin || true
+        rm -rf "$HOME/.cargo/registry/cache" "$HOME/.cargo/registry/src" || true
+        echo "Disk after cleanup:"; df -h .
+
     - name: Create DMG
       working-directory: anki-source
       run: |
