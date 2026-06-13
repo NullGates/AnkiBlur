@@ -24,52 +24,49 @@ This repo takes the official [Anki](https://github.com/ankitects/anki) and appli
 
 ### Linux
 
-#### Option 1: AppImage (Recommended)
+Every push builds three package formats per architecture (`x86_64` and `aarch64`)
+in CI: a portable **AppImage**, a **.deb** (Debian/Ubuntu/Mint/Pop!_OS) and a
+**.rpm** (Fedora/RHEL/openSUSE). Pick whichever fits your distro. They are
+installed as `ankiblur`, so they sit side by side with a stock Anki.
+
+> On first launch the launcher downloads the Python/Qt runtime into
+> `~/.local/share/AnkiBlurProgramFiles/`, so the first start needs an internet
+> connection and takes a little longer.
+
+#### Option 1: AppImage (Recommended — works on any distro)
 ```bash
-# Download the AppImage
-wget https://github.com/your-repo/ankiblur/releases/latest/download/ankiblur-linux-x86_64.AppImage
+# Download the AppImage for your architecture, then:
+chmod +x AnkiBlur-*-x86_64.AppImage
+./AnkiBlur-*-x86_64.AppImage
 
-# Make it executable
-chmod +x ankiblur-linux-x86_64.AppImage
-
-# Run directly
-./ankiblur-linux-x86_64.AppImage
-
-# Optional: Integrate with system
-./ankiblur-linux-x86_64.AppImage --appimage-extract
+# Optional: integrate with the system menu
+./AnkiBlur-*-x86_64.AppImage --appimage-extract
 sudo mv squashfs-root /opt/ankiblur
 sudo ln -s /opt/ankiblur/AppRun /usr/local/bin/ankiblur
 ```
 
-#### Option 2: Debian Package (.deb)
+#### Option 2: Debian / Ubuntu (.deb)
 ```bash
-# Download and install
-wget https://github.com/your-repo/ankiblur/releases/latest/download/ankiblur-linux-x86_64.deb
-sudo apt install ./ankiblur-linux-x86_64.deb
-
-# Or with dpkg
-sudo dpkg -i ankiblur-linux-x86_64.deb
-sudo apt install -f  # Fix dependencies if needed
+sudo apt install ./ankiblur_*_amd64.deb     # arm64: ankiblur_*_arm64.deb
+# or:  sudo dpkg -i ankiblur_*_amd64.deb && sudo apt install -f
 ```
 
-#### Option 3: Flatpak
+#### Option 3: Fedora / openSUSE (.rpm)
 ```bash
-# Install from Flathub (coming soon)
-flatpak install flathub net.ankiblur.AnkiBlur
-
-# Run
-flatpak run net.ankiblur.AnkiBlur
+sudo dnf install ./ankiblur-*.x86_64.rpm     # aarch64: ankiblur-*.aarch64.rpm
+# openSUSE:  sudo zypper install ./ankiblur-*.x86_64.rpm
 ```
 
-#### Option 4: NixOS
+#### Option 4: Raw launcher tarball (other distros / Nix / manual)
 ```bash
-# Using nix run (requires flakes)
-nix run github:your-repo/ankiblur
-
-# Or build locally
-nix-build ankiblur-patchelf.nix
-./result/bin/ankiblur
+# The architecture-specific .tar.zst is the plain Anki launcher payload.
+tar --use-compress-program=unzstd -xf anki-launcher-linux-x86_64.tar.zst
+cd anki-launcher-* && sudo ./install.sh   # or just ./anki to run in place
 ```
+
+> **Flatpak** is not yet available: the launcher downloads its runtime at first
+> start, which does not fit Flathub's offline-build model. A fully self-contained
+> Flatpak is tracked as future work.
 
 ### macOS
 

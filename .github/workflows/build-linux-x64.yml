@@ -14,12 +14,14 @@ on:
       - '.github/workflows/build-linux-x64.yml'
       - 'patches/**'
       - 'scripts/**'
+      - 'packaging/**'
   pull_request:
     branches: [ main ]
     paths:
       - '.github/workflows/build-linux-x64.yml'
       - 'patches/**'
       - 'scripts/**'
+      - 'packaging/**'
 
 env:
   ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
@@ -191,7 +193,31 @@ jobs:
         cd artifacts
         sha256sum anki-launcher-linux-x86_64.tar.zst > anki-launcher-linux-x86_64.tar.zst.sha256
 
+    - name: Install Linux packaging tools
+      run: |
+        sudo apt-get update
+        # dpkg-deb ships with the runner; rpm provides rpmbuild; file is used by
+        # rpm's dependency generator; desktop-file-utils provides the
+        # desktop-file-validate that appimagetool requires. appimagetool itself
+        # is fetched by the script.
+        sudo apt-get install -y rpm file desktop-file-utils
+
+    - name: Build distro packages (.deb / .rpm / .AppImage)
+      shell: bash
+      env:
+        ANKIBLUR_REQUIRE_ALL: '1'
+      run: |
+        chmod +x scripts/package-linux.sh
+        ./scripts/package-linux.sh \
+          --launcher-dir "anki-source/out/launcher/anki-launcher-${ANKI_VERSION}-linux-amd64" \
+          --arch amd64 \
+          --version "${ANKI_VERSION}" \
+          --outdir artifacts
+
     - name: Upload Artifacts
+      # Upload whatever made it into artifacts/ even if packaging failed, so a
+      # transient appimagetool fetch can't drop the already-built tarball/.deb/.rpm.
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: ankiblur-launcher-linux-x64

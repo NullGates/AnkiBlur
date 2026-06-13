@@ -1,0 +1,21 @@
+[Desktop Entry]
+Name=AnkiBlur
+GenericName=Flashcards
+Comment=Spaced-repetition flashcards with a translucent, blurred window
+# Uses the "ankiblur" entrypoint (not "anki") so AnkiBlur can be installed
+# side by side with a stock Anki without clobbering its command or icon.
+Exec=ankiblur %f
+TryExec=ankiblur
+Icon=ankiblur
+Categories=Education;Qt;
+Keywords=flashcards;memory;learning;spaced-repetition;anki;
+Terminal=false
+Type=Application
+Version=1.0
+MimeType=application/x-apkg;application/x-anki;application/x-ankiaddon;application/x-colpkg;
+# Single-window hint. Kept X-prefixed: the bare "SingleMainWindow" key (XDG spec
+# 1.5) is rejected as an error by older desktop-file-validate (e.g. on Ubuntu
+# 22.04), which would make appimagetool abort the AppImage build.
+X-GNOME-SingleWindow=true
+X-SingleMainWindow=true
+StartupWMClass=ankiblur

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata. @VERSION@ / @DATE@ are filled in by scripts/package-linux.sh -->
+<component type="desktop-application">
+  <id>net.ankiblur.AnkiBlur</id>
+
+  <name>AnkiBlur</name>
+  <summary>Spaced-repetition flashcards with a translucent, blurred window</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      AnkiBlur is the Anki spaced-repetition flashcard program with a
+      translucent, blurred window effect layered on top. It is built
+      automatically from each upstream Anki release and is fully compatible
+      with your existing collection, add-ons and AnkiWeb sync.
+    </p>
+    <p>
+      The blur is drawn by your compositor: AnkiBlur only makes the window
+      transparent and asks the OS to blur whatever is behind it. A compositor
+      that implements background blur is required to see the effect.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">net.ankiblur.AnkiBlur.desktop</launchable>
+  <provides>
+    <binary>ankiblur</binary>
+  </provides>
+
+  <categories>
+    <category>Education</category>
+    <category>Languages</category>
+  </categories>
+
+  <url type="homepage">https://github.com/NullGates/AnkiBlur</url>
+  <url type="bugtracker">https://github.com/NullGates/AnkiBlur/issues</url>
+
+  <developer id="net.ankiblur">
+    <name>AnkiBlur Maintainers</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="@VERSION@" date="@DATE@" />
+  </releases>
+</component>
