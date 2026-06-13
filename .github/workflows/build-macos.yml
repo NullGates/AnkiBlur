@@ -41,6 +41,41 @@ jobs:
       run: |
         brew install zstd
 
+    - name: Free up disk space
+      run: |
+        set +e
+        echo "=== disk before ==="; df -h /
+        # GitHub macOS runners ship several Xcode versions + simulator runtimes
+        # that consume most of the disk, leaving only a few GB free. Anki's
+        # ./ninja bootstrap plus the dual-target Rust build then fills the rest,
+        # so hdiutil fails with "No space left on device" when writing the DMG.
+        # This build only needs the active Xcode's SDK (SDKROOT=/Applications/
+        # Xcode.app/...), so remove the other Xcodes and the simulator runtimes;
+        # that reclaims tens of GB. Resolution uses `cd && pwd -P` because macOS
+        # `readlink -f` is unreliable, and it fails safe (removes nothing) if the
+        # active Xcode can't be determined.
+        real() { ( cd "$1" 2>/dev/null && pwd -P ); }
+        KEEP1="$(real /Applications/Xcode.app)"
+        KEEP2="$(real "$(xcode-select -p 2>/dev/null | sed 's#/Contents/Developer##')")"
+        echo "keeping active Xcode(s): $KEEP1 $KEEP2"
+        if [ -z "$KEEP1$KEEP2" ]; then
+          echo "WARNING: could not resolve active Xcode; skipping Xcode removal"
+        else
+          for x in /Applications/Xcode_*.app; do
+            [ -d "$x" ] || continue
+            xr="$(real "$x")"
+            if [ -n "$xr" ] && { [ "$xr" = "$KEEP1" ] || [ "$xr" = "$KEEP2" ]; }; then
+              echo "keeping $x"; continue
+            fi
+            echo "removing $x"; sudo rm -rf "$x"
+          done
+        fi
+        sudo rm -rf /Library/Developer/CoreSimulator/Profiles/Runtimes/* 2>/dev/null
+        sudo rm -rf ~/Library/Developer/CoreSimulator/Caches/* 2>/dev/null
+        sudo rm -rf "$ANDROID_SDK_ROOT" "$ANDROID_HOME" 2>/dev/null
+        echo "=== disk after ==="; df -h /
+        true
+
     - name: Download Anki Source
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
