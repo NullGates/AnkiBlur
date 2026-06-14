@@ -71,7 +71,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
 --- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
 +++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 20:53:59.887737519 +0100
-@@ -0,0 +0,159 @@
+@@ -0,0 +0,167 @@
 +use std::path::{Path, PathBuf};
 +use anki_io::{read_file, write_file, copy_file};
 +use anyhow::{Context, Result};
@@ -117,7 +117,15 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +        .context("Failed to get current executable path")?;
 +    let exe_dir = exe_path.parent()
 +        .context("Failed to get executable directory")?;
-+    Ok(exe_dir.join("patches"))
++    // Windows/Linux ship patches next to the launcher binary.
++    let local = exe_dir.join("patches");
++    if local.exists() {
++        return Ok(local);
++    }
++    // macOS .app bundle: launcher lives in Contents/MacOS, but data must
++    // sit under Contents/Resources so codesign can seal it (a data dir in
++    // Contents/MacOS breaks bundle signing). Fall back there.
++    Ok(exe_dir.join("../Resources/patches"))
 +}
 +
 +/// Apply a single patch file to the venv
