@@ -225,6 +225,36 @@ jobs:
         EOF
         chmod +x qt/launcher/mac/build.sh
 
+    - name: Import signing certificate
+      if: github.event_name != 'pull_request'
+      env:
+        MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+        MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        KEYCHAIN_PWD: ${{ secrets.KEYCHAIN_PWD }}
+      run: |
+        set -euo pipefail
+        CERT_PATH="$RUNNER_TEMP/cert.p12"
+        KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+        # Decode the .p12 from the base64 secret
+        echo "$MACOS_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+
+        # Create + unlock a throwaway keychain for this job only
+        security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+        security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+
+        # Import the Developer ID Application cert + private key
+        security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PWD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+
+        # Make the temp keychain visible to codesign
+        security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+        # Sanity check: the Developer ID identity must be present
+        security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+        rm -f "$CERT_PATH"
+
     - name: Build Launcher
       shell: bash
       working-directory: anki-source
@@ -255,6 +285,34 @@ jobs:
         rm -rf "$HOME/.cargo/registry/cache" "$HOME/.cargo/registry/src" || true
         echo "Disk after cleanup:"; df -h .
 
+    - name: Codesign app
+      if: github.event_name != 'pull_request'
+      working-directory: anki-source
+      env:
+        SIGN_ID: "Developer ID Application: VS NETWORK (X5L73KV432)"
+      run: |
+        set -euo pipefail
+        APP="out/launcher/Anki.app"
+        ENTITLEMENTS="qt/launcher/mac/entitlements.python.xml"
+
+        # Hardened runtime + Python entitlements are required for notarization
+        ls -l "$ENTITLEMENTS"
+
+        # Sign nested binaries first, then the bundle itself
+        for f in \
+          "$APP/Contents/MacOS/uv" \
+          "$APP/Contents/MacOS/install_name_tool" \
+          "$APP/Contents/MacOS/launcher" \
+          "$APP"; do
+          codesign --force --options runtime --timestamp \
+            --entitlements "$ENTITLEMENTS" \
+            -s "$SIGN_ID" "$f"
+        done
+
+        # Verify before we bother notarizing
+        codesign --verify --strict --verbose=2 "$APP"
+        codesign -dvv "$APP" 2>&1 | grep -iE "Authority|flags" || true
+
     - name: Create DMG
       working-directory: anki-source
       run: |
@@ -281,6 +339,34 @@ jobs:
         rm -rf out/launcher/dmg_temp
 
         echo "DMG created successfully at out/launcher/$DMG_NAME"
+
+    - name: Notarize and staple DMG
+      if: github.event_name != 'pull_request'
+      working-directory: anki-source
+      env:
+        AC_API_KEY: ${{ secrets.AC_API_KEY }}
+        AC_API_KEY_ID: ${{ secrets.AC_API_KEY_ID }}
+        AC_API_ISSUER_ID: ${{ secrets.AC_API_ISSUER_ID }}
+      run: |
+        set -euo pipefail
+        DMG="out/launcher/anki-launcher-mac.dmg"
+        KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+
+        # Decode the App Store Connect API key
+        echo "$AC_API_KEY" | base64 --decode > "$KEY_PATH"
+
+        # Submit for notarization and block until Apple returns a verdict
+        xcrun notarytool submit "$DMG" \
+          --key "$KEY_PATH" \
+          --key-id "$AC_API_KEY_ID" \
+          --issuer "$AC_API_ISSUER_ID" \
+          --wait
+
+        # Staple the ticket so the DMG validates even offline
+        xcrun stapler staple "$DMG"
+        xcrun stapler validate "$DMG"
+
+        rm -f "$KEY_PATH"
 
     - name: Package Artifacts
       shell: bash
