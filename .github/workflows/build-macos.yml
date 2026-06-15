@@ -316,29 +316,35 @@ jobs:
     - name: Create DMG
       working-directory: anki-source
       run: |
-        # Check if Anki.app exists
+        set -euo pipefail
         if [ ! -d "out/launcher/Anki.app" ]; then
           echo "Error: Anki.app not found at out/launcher/Anki.app"
-          echo "Contents of out/launcher:"
           ls -la out/launcher/ || echo "out/launcher directory not found"
           exit 1
         fi
 
-        # Create DMG using hdiutil directly
+        # Reclaim every non-essential byte first: at DMG time only Anki.app
+        # matters, and the runner disk is nearly full after the dual-target
+        # build (hdiutil was failing with "No space left on device").
+        rm -rf target "$HOME/.cargo/registry" "$HOME/.rustup" 2>/dev/null || true
+        find out/launcher -mindepth 1 -maxdepth 1 ! -name Anki.app -exec rm -rf {} + 2>/dev/null || true
+        echo "Disk before DMG:"; df -h .
+
         DMG_NAME="anki-launcher-mac.dmg"
         echo "Creating DMG: $DMG_NAME"
 
-        # Create a temporary directory for DMG contents
-        mkdir -p out/launcher/dmg_temp
-        cp -R out/launcher/Anki.app out/launcher/dmg_temp/
+        # Stage with MOVE, not copy: copying briefly doubles the
+        # hundreds-of-MB app on the tiny runner disk. mv is an instant rename
+        # (same filesystem) and uses no extra space. The signed app is
+        # preserved; we only need the DMG afterwards.
+        mkdir -p dmg_stage
+        mv out/launcher/Anki.app dmg_stage/
 
-        # Create the DMG
-        hdiutil create -volname "AnkiBlur" -srcfolder out/launcher/dmg_temp -ov -format UDZO "out/launcher/$DMG_NAME"
+        hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO "out/launcher/$DMG_NAME"
 
-        # Clean up
-        rm -rf out/launcher/dmg_temp
-
-        echo "DMG created successfully at out/launcher/$DMG_NAME"
+        rm -rf dmg_stage
+        echo "DMG created at out/launcher/$DMG_NAME"
+        df -h .
 
     - name: Notarize and staple DMG
       if: github.event_name != 'pull_request'
