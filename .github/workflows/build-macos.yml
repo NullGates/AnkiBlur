@@ -354,13 +354,37 @@ jobs:
 
         # Decode the App Store Connect API key
         echo "$AC_API_KEY" | base64 --decode > "$KEY_PATH"
+        AUTH=(--key "$KEY_PATH" --key-id "$AC_API_KEY_ID" --issuer "$AC_API_ISSUER_ID")
 
-        # Submit for notarization and block until Apple returns a verdict
-        xcrun notarytool submit "$DMG" \
-          --key "$KEY_PATH" \
-          --key-id "$AC_API_KEY_ID" \
-          --issuer "$AC_API_ISSUER_ID" \
-          --wait
+        # Submit WITHOUT --wait. `notarytool --wait` polls in one long-lived
+        # request and dies on a single transient network error (NSURLError
+        # -1009), which previously killed a 3h wait even though Apple had
+        # accepted the submission. Submitting once + polling separately makes
+        # each status check independent, so a dropped connection just retries.
+        SUBMIT_ID=$(xcrun notarytool submit "$DMG" "${AUTH[@]}" --output-format json | jq -r .id)
+        echo "Submission ID: $SUBMIT_ID"
+
+        # Poll resiliently. The first notarization of a new app can be slow,
+        # but subsequent ones are quick once Apple has profiled it. ~60 min cap.
+        STATUS="Unknown"
+        for i in $(seq 1 120); do
+          STATUS=$(xcrun notarytool info "$SUBMIT_ID" "${AUTH[@]}" --output-format json 2>/dev/null | jq -r .status 2>/dev/null || echo "NetworkError")
+          echo "[poll $i] status: $STATUS"
+          case "$STATUS" in
+            Accepted) break ;;
+            Invalid|Rejected)
+              echo "::error::Notarization $STATUS — full log follows:"
+              xcrun notarytool log "$SUBMIT_ID" "${AUTH[@]}" || true
+              exit 1 ;;
+            *) sleep 30 ;;   # In Progress / NetworkError -> wait and retry
+          esac
+        done
+
+        if [ "$STATUS" != "Accepted" ]; then
+          echo "::error::Timed out after ~60 min (last status: $STATUS)."
+          echo "Apple keeps processing $SUBMIT_ID server-side; just re-run this job to staple+ship."
+          exit 1
+        fi
 
         # Staple the ticket so the DMG validates even offline
         xcrun stapler staple "$DMG"
