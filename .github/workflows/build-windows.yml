@@ -30,7 +30,7 @@ jobs:
 
     steps:
     - name: Checkout AnkiBlur Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
@@ -79,24 +79,16 @@ jobs:
         chmod +x scripts/validate-and-apply-patches.sh
         ./scripts/validate-and-apply-patches.sh anki-source
 
-    - name: Setup Build Environment
-      shell: bash
-      working-directory: anki-source
-      run: |
-        # Create version file
-        echo "${{ env.ANKI_VERSION }}" > .version
-
-        # Install UV for Python dependency management
-        curl -LsSf https://astral.sh/uv/install.ps1 | powershell -c -
-        echo "$env:USERPROFILE\\.local\\bin" >> $GITHUB_PATH
-
     - name: Extract UV binaries
       working-directory: anki-source
       shell: powershell
       run: |
-        # Download UV for Windows
+        # Download UV for Windows. Pinned to a known release: releases/latest
+        # already broke this workflow once (uvw.exe layout drift), so don't
+        # let future uv releases change the zip under us.
+        $UV_VERSION = "0.11.29"
         New-Item -ItemType Directory -Force -Path out\extracted\uv
-        Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip" -OutFile "uv-windows.zip"
+        Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-x86_64-pc-windows-msvc.zip" -OutFile "uv-windows.zip"
         # Extract directly into out\extracted\uv so BOTH uv.exe and uvw.exe
         # (both at the zip root) land where build_win.rs copy_files() expects them.
         # The previous version extracted to out\extracted and moved ONLY uv.exe,
@@ -331,10 +323,12 @@ jobs:
         cd artifacts
         # package-artifacts.sh writes the installer with the version in its name
         # (anki-launcher-<version>-windows.exe), so the checksum must match that.
-        certUtil -hashfile "anki-launcher-${{ env.ANKI_VERSION }}-windows.exe" SHA256 > "anki-launcher-${{ env.ANKI_VERSION }}-windows.exe.sha256"
+        # sha256sum (Git-bash) instead of certUtil: its output is single-line and
+        # `sha256sum -c` compatible, matching the Linux artifacts' checksum format.
+        sha256sum "anki-launcher-${{ env.ANKI_VERSION }}-windows.exe" > "anki-launcher-${{ env.ANKI_VERSION }}-windows.exe.sha256"
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ankiblur-launcher-windows
         path: artifacts/
