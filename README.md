@@ -1,6 +1,6 @@
 # AnkiBlur
 
-This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top to achieve a window blur effect. This repo Automatically tracks and builds on each new Anki release.
+This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top to achieve a window blur effect. Builds are currently pinned to Anki 25.09; new Anki releases require a manual version bump.
 
 <p align="center">
   <img src="screenshot.jpg" alt="AnkiBlur screenshot showing window blur effect" width="70%">
@@ -10,9 +10,9 @@ This repo takes the official [Anki](https://github.com/ankitects/anki) and appli
 
 | Platform | Supported Architecture | Download Latest | Blur Support |
 |---|---|---|---|
-| <img width="150" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" />| ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | ![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) | Requires a compositor implementing blur  |
-|  <img width="150" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /> | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon](https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | ![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)| Native blur support |
-| <img width="400" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| ![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e) | Native blur support (Windows 8+) |
+| <img width="150" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" />| ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Requires a compositor implementing blur  |
+|  <img width="150" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /> | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon](https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)| Native blur support |
+| <img width="400" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| [![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Native blur support (Windows 8+) |
 
 
 [comment]: <> (<img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">) 
@@ -60,7 +60,7 @@ sudo dnf install ./ankiblur-*.x86_64.rpm     # aarch64: ankiblur-*.aarch64.rpm
 #### Option 4: Raw launcher tarball (other distros / Nix / manual)
 ```bash
 # The architecture-specific .tar.zst is the plain Anki launcher payload.
-tar --use-compress-program=unzstd -xf anki-launcher-linux-x86_64.tar.zst
+tar --use-compress-program=unzstd -xf anki-launcher-<version>-linux-x86_64.tar.zst
 cd anki-launcher-* && sudo ./install.sh   # or just ./anki to run in place
 ```
 
@@ -71,13 +71,11 @@ cd anki-launcher-* && sudo ./install.sh   # or just ./anki to run in place
 ### macOS
 
 #### Download and Install
+Download `anki-launcher-<version>-mac.dmg` from the [releases page](https://github.com/NullGates/AnkiBlur/releases/latest), then:
 ```bash
-# Download DMG
-wget https://github.com/your-repo/ankiblur/releases/latest/download/ankiblur-macos-universal.dmg
-
 # Mount and install
-open ankiblur-macos-universal.dmg
-# Drag AnkiBlur.app to Applications folder
+open anki-launcher-<version>-mac.dmg
+# Drag the app to your Applications folder
 ```
 
 #### Command Line (Homebrew - coming soon)
@@ -88,17 +86,12 @@ brew install --cask ankiblur
 ### Windows
 
 #### Option 1: Installer (Recommended)
-1. Download `ankiblur-windows-x64.exe` from [releases](https://github.com/your-repo/ankiblur/releases/latest)
-2. Run the installer as Administrator
+1. Download `anki-launcher-<version>-windows.exe` from [releases](https://github.com/NullGates/AnkiBlur/releases/latest)
+2. Run the installer (no administrator rights needed; it installs to your user profile)
 3. Follow installation wizard
 4. Launch from Start Menu or Desktop shortcut
 
-#### Option 2: Portable
-1. Download `ankiblur-windows-x64-portable.zip`
-2. Extract to desired folder
-3. Run `ankiblur.exe` directly
-
-#### Option 3: Package Managers
+#### Option 2: Package Managers
 ```powershell
 # Chocolatey (coming soon)
 choco install ankiblur
@@ -118,7 +111,7 @@ A: AnkiBlur is identical to Anki but with window transparency and blur effects. 
 A: Yes! AnkiBlur uses the same data format and profile system as Anki. Your cards, decks, and settings are fully compatible.
 
 **Q: Can I run both Anki and AnkiBlur on the same system?**
-A: Yes, they can coexist. They use separate profile directories by default.
+A: Yes, they can be installed side by side. Be aware that they share the same Anki data directory and profiles (`~/.local/share/Anki2` on Linux, and the platform equivalents) — your decks, settings and add-ons are common to both. Only the launcher runtime lives separately (in `AnkiBlurProgramFiles` instead of `AnkiProgramFiles`). Don't run both at the same time.
 
 **Q: How do I sync my data between devices?**
 A: Use AnkiWeb sync exactly like regular Anki. Your AnkiWeb account works with both.
@@ -131,7 +124,7 @@ A: Blur effects require a compositor. Install one of these:
 - **X11**: KWin (KDE), Compiz, or Picom
 
 **Q: Getting "libEGL.so.1 not found" error on NixOS**
-A: Use the NixOS-specific installation method or run with `nixGL`.
+A: The bundled binaries expect a conventional filesystem layout. Run AnkiBlur through `nixGL` (e.g. `nixGL ./anki`) or `steam-run`.
 
 **Q: AppImage won't run - "Permission denied"**
 A: Make it executable: `chmod +x ankiblur-*.AppImage`
@@ -148,7 +141,7 @@ A: This is a false positive. Click "More info" → "Run anyway" or temporarily d
 A: Minimal impact. The blur effect uses hardware acceleration when available.
 
 **Q: Can I adjust the transparency level?**
-A: Currently fixed at 95% opacity. Customization options coming in future versions.
+A: The window canvas is fully transparent; what you see is a configurable tint drawn by the bundled AnkiBlur addon. Change the tint color and alpha per theme in Anki under Tools → Add-ons → AnkiBlur Background Theme → Config (defaults: light `#ffffff` at alpha 15, dark `#1a1a2e` at alpha 25).
 
 **Q: Does AnkiBlur support add-ons?**
 A: Yes! All Anki add-ons are fully compatible.
@@ -161,34 +154,30 @@ A: Download and install the latest version. Your data and settings are preserved
 **Q: AnkiBlur crashes on startup**
 A: Try these solutions:
 1. Update your graphics drivers
-2. Disable hardware acceleration: `ankiblur --disable-gpu`
-3. Reset preferences: Delete `~/.local/share/ankiblur/prefs21.db`
+2. Reset preferences: delete `~/.local/share/Anki2/prefs21.db` — note this file is shared with stock Anki, so back it up first
 
 **Q: Sync isn't working**
 A: Check your internet connection and AnkiWeb credentials. Sync works identically to regular Anki.
 
 **Q: Getting "Qt platform plugin" errors**
-A: Install required Qt libraries:
-- **Ubuntu/Debian**: `sudo apt install qt6-base-dev`
-- **Fedora**: `sudo dnf install qt6-qtbase-devel`
+A: Qt itself ships inside the bundled PyQt6 wheels; what's usually missing are the system xcb runtime libraries it loads:
+- **Ubuntu/Debian**: `sudo apt install libxcb-cursor0 libxcb-xinerama0`
 
 **Q: How do I completely uninstall AnkiBlur?**
 A:
-- **Linux**: `sudo apt remove ankiblur` or delete AppImage
-- **macOS**: Drag AnkiBlur.app to Trash
-- **Windows**: Use "Add/Remove Programs" or run uninstaller
-- **Data**: Delete `~/.local/share/ankiblur/` (Linux) or equivalent on other platforms
+- **Linux**: `sudo apt remove ankiblur` (for the .deb) or delete the AppImage
+- **macOS**: Drag the app to Trash
+- **Windows**: Use "Add/Remove Programs" or run the uninstaller
+- **Launcher runtime**: delete `~/.local/share/AnkiBlurProgramFiles/` (Linux; equivalent data dir on other platforms)
+- **User data**: lives in the shared `~/.local/share/Anki2/` — do NOT delete it if you also use stock Anki, it holds your cards and profiles for both
 
 ## How It Works
 
-AnkiBlur applies patches to Anki source code:
-1. **Branding**: Changes "Anki" to "AnkiBlur" (I'm not allowed to post as "Anki", altough all credits goes to the ankitechts !)
-2. **Transparency**: Adds `setWindowOpacity(0.95)` and CSS `backdrop-filter: blur(10px)`
-3. **Version**: Updates metadata
-
-GitHub Actions automatically builds new versions when Anki releases are detected.
+1. **Build time**: CI applies patches to the official Anki launcher source that rebrand it as AnkiBlur (I'm not allowed to post as "Anki", although all credit goes to the ankitects!) and add the AnkiBlur install steps.
+2. **First run**: the launcher installs Anki, applies transparency patches to it (`WA_TranslucentBackground` on the main window plus transparent webview page backgrounds), and installs a background-tint addon that draws a configurable tint over the transparent canvas.
+3. **Blur**: the blur itself is drawn by your OS/compositor behind the transparent window — AnkiBlur only makes the window transparent and hints the OS to blur what's behind it.
 
 
 ## License
 
-AGPL-3.0 (same as Anki)
+AnkiBlur is licensed under the GNU AGPL-3.0-or-later, the same license as Anki. The full license text is in [LICENSE](LICENSE); upstream attribution and third-party notices are in [NOTICE](NOTICE). Binary installers convey this program under the same license; each release ships the license text alongside the artifacts.
