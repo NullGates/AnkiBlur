@@ -13,12 +13,14 @@ on:
     paths:
       - '.github/workflows/build-macos.yml'
       - 'patches/**'
+      - 'addons/**'
       - 'scripts/**'
   pull_request:
     branches: [ main ]
     paths:
       - '.github/workflows/build-macos.yml'
       - 'patches/**'
+      - 'addons/**'
       - 'scripts/**'
 
 env:
@@ -79,20 +81,6 @@ jobs:
     - name: Download Anki Source
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
-
-    - name: Setup macOS patches
-      run: |
-        # Copy macOS main.py patches to expected location
-        mkdir -p patches/0B_anki_qt_window
-        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib_main.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib64_main.patch \
-           patches/0B_anki_qt_window/
-        # Copy shared webview patches
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
-           patches/0B_anki_qt_window/
 
     - name: Validate and Apply Patches
       shell: bash
@@ -184,22 +172,6 @@ jobs:
         cp ../pyproject.toml "$APP_LAUNCHER/Contents/Resources/"
         cp ../../../.python-version "$APP_LAUNCHER/Contents/Resources/"
         cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
-
-        # Copy patches directory for runtime patching
-        mkdir -p "$APP_LAUNCHER/Contents/Resources/patches"
-
-        # Copy all anki_qt_window patches
-        for patch in anki_qt_window_lib_main.patch anki_qt_window_lib_webview.patch \
-                     anki_qt_window_lib64_main.patch anki_qt_window_lib64_webview.patch; do
-            [ -f "../../../patches/0B_anki_qt_window/$patch" ] && \
-                cp "../../../patches/0B_anki_qt_window/$patch" "$APP_LAUNCHER/Contents/Resources/patches/" || \
-                echo "Warning: $patch not found"
-        done
-
-        # When anki_branding.patch is created:
-        # [ -f "../../../patches/0A_anki_branding/anki_branding.patch" ] && \
-        #     cp ../../../patches/0A_anki_branding/anki_branding.patch "$APP_LAUNCHER/Contents/Resources/patches/" || \
-        #     echo "Warning: anki_branding.patch not found"
 
         # Skip codesigning if NODMG is set
         if [ -n "$NODMG" ]; then

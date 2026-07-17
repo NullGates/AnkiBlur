@@ -13,6 +13,7 @@ on:
     paths:
       - '.github/workflows/build-linux-x64.yml'
       - 'patches/**'
+      - 'addons/**'
       - 'scripts/**'
       - 'packaging/**'
   pull_request:
@@ -20,6 +21,7 @@ on:
     paths:
       - '.github/workflows/build-linux-x64.yml'
       - 'patches/**'
+      - 'addons/**'
       - 'scripts/**'
       - 'packaging/**'
 
@@ -52,20 +54,6 @@ jobs:
     - name: Download Anki Source
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
-
-    - name: Setup Linux patches
-      run: |
-        # Copy Linux main.py patches to expected location
-        mkdir -p patches/0B_anki_qt_window
-        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib_main.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib64_main.patch \
-           patches/0B_anki_qt_window/
-        # Copy shared webview patches
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
-           patches/0B_anki_qt_window/
 
     - name: Validate and Apply Patches
       shell: bash
@@ -135,22 +123,6 @@ jobs:
         [ -f "../pyproject.toml" ] && cp ../pyproject.toml "$LAUNCHER_DIR/"
         [ -f "../../../.python-version" ] && cp ../../../.python-version "$LAUNCHER_DIR/"
         [ -f "../versions.py" ] && cp ../versions.py "$LAUNCHER_DIR/"
-
-        # Copy patches directory for runtime patching
-        mkdir -p "$LAUNCHER_DIR/patches"
-
-        # Copy all anki_qt_window patches
-        for patch in anki_qt_window_lib_main.patch anki_qt_window_lib_webview.patch \
-                     anki_qt_window_lib64_main.patch anki_qt_window_lib64_webview.patch; do
-            [ -f "../../../patches/0B_anki_qt_window/$patch" ] && \
-                cp "../../../patches/0B_anki_qt_window/$patch" "$LAUNCHER_DIR/patches/" || \
-                echo "Warning: $patch not found"
-        done
-
-        # When anki_branding.patch is created:
-        # [ -f "../../../patches/0A_anki_branding/anki_branding.patch" ] && \
-        #     cp ../../../patches/0A_anki_branding/anki_branding.patch "$LAUNCHER_DIR/patches/" || \
-        #     echo "Warning: anki_branding.patch not found"
 
         # Set executable permissions
         chmod +x "$LAUNCHER_DIR/launcher.amd64" "$LAUNCHER_DIR/uv.amd64" "$LAUNCHER_DIR/anki" || true

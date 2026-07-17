@@ -45,8 +45,12 @@ usage() {
     echo ""
     echo "Patch Application Order:"
     echo "  1. launcher_branding     - Changes Anki branding to AnkiBlur"
-    echo "  2. launcher_anki_patches - Core Anki functionality patches"
-    echo "  3. launcher_anki_addon   - AnkiBlur addon integration patches"
+    echo "  2. launcher_anki_patches - Dependency injection + legacy venv cleanup"
+    echo "  3. launcher_anki_addon   - Embeds the AnkiBlur addon in the launcher"
+    echo ""
+    echo "After the patches apply, the AnkiBlur .ankiaddon is built"
+    echo "deterministically from addons/ and staged into qt/launcher/addon/"
+    echo "for the launcher's include_bytes! embedding."
     echo ""
     exit 1
 }
@@ -284,10 +288,20 @@ main() {
         log_success "All patches applied successfully!"
         log_info "AnkiBlur patches have been applied to: $ANKI_SOURCE"
 
-        # Copy patches directory to the Anki source for inclusion in final package
-        log_info "Copying patches directory to Anki source for package inclusion"
-        cp -r "$REPO_ROOT/patches" "$ANKI_SOURCE/"
-        log_success "Patches directory copied to Anki source"
+        # Build the deterministic addon zip and stage it for the
+        # include_bytes! in the launcher's addon.rs (patch 03). Must happen
+        # before any cargo build, or compilation fails on the missing file.
+        log_info "Building and staging the AnkiBlur addon zip"
+        PY="$(command -v python3 || command -v python)"
+        ADDON_SRC="$REPO_ROOT/addons/anki_webview_addon/ankiblur_background_theme"
+        ADDON_ZIP="$ANKI_SOURCE/qt/launcher/addon/ankiblur_background_theme.ankiaddon"
+        "$PY" "$REPO_ROOT/scripts/build-addon-zip.py" \
+            --source "$ADDON_SRC" --top-dir ankiblur_background_theme --output "$ADDON_ZIP"
+        # Guard against committed-zip drift: the committed copy is what
+        # legacy launchers still download from the main branch at runtime.
+        cmp -s "$ADDON_ZIP" "$REPO_ROOT/addons/anki_webview_addon/ankiblur_background_theme.ankiaddon" \
+            || { log_error "Committed .ankiaddon is stale; run scripts/build-addon-zip.py and commit the result"; exit 1; }
+        log_success "Addon zip staged: $ADDON_ZIP"
 
         # Clean up backup location file
         rm -f "$ANKI_SOURCE.backup_location"
