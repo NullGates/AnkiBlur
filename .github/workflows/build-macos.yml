@@ -8,6 +8,12 @@ on:
         required: true
         default: '25.09'
         type: string
+  workflow_call:
+    inputs:
+      anki_version:
+        required: false
+        type: string
+        default: '25.09'
   push:
     branches: [ main ]
     paths:
@@ -21,16 +27,29 @@ on:
       - 'patches/**'
       - 'scripts/**'
 
+# Hardcoded workflow name in the group (not ${{ github.workflow }}): inside a
+# workflow_call callee that expression resolves to the CALLER's name, so all
+# builds invoked by release.yml would share one group and cancel each other.
+concurrency:
+  group: build-macos-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
+  # Pinned: releases/latest already broke the Windows workflow once (archive
+  # layout drift). Keep in sync with build-windows.yml / build-linux.yml.
+  UV_VERSION: '0.11.29'
 
 jobs:
   build-macos:
     runs-on: macos-latest
+    timeout-minutes: 120
+    # No Swatinem/rust-cache here: this workflow deletes target/ and ~/.cargo
+    # mid-run to reclaim disk space, which would make any cache save useless.
 
     steps:
     - name: Checkout AnkiBlur Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
@@ -107,22 +126,23 @@ jobs:
         # Create version file
         echo "${{ env.ANKI_VERSION }}" > .version
 
-        # Install UV for Python dependency management
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
     - name: Extract UV binaries
       working-directory: anki-source
       run: |
-        # Create universal UV binary for macOS
+        set -euo pipefail
+        # Create universal UV binary for macOS. This is the uv that ships
+        # inside (and is codesigned into) Anki.app -- the build script below
+        # copies out/uv into Contents/MacOS.
         mkdir -p out
-        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-apple-darwin.tar.gz -o uv-x86_64.tar.gz
-        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-apple-darwin.tar.gz -o uv-aarch64.tar.gz
+        curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-apple-darwin.tar.gz" -o uv-x86_64.tar.gz
+        curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-aarch64-apple-darwin.tar.gz" -o uv-aarch64.tar.gz
 
         tar -xzf uv-x86_64.tar.gz
         tar -xzf uv-aarch64.tar.gz
 
         lipo -create uv-x86_64-apple-darwin/uv uv-aarch64-apple-darwin/uv -output out/uv
+        test -x out/uv || { echo "uv missing after lipo"; exit 1; }
+        lipo -archs out/uv
 
     - name: Patch macOS Build Script
       shell: bash
@@ -149,9 +169,6 @@ jobs:
         cargo build -p launcher --release --target aarch64-apple-darwin
         cargo build -p launcher --release --target x86_64-apple-darwin
 
-        # Build UV universal binary
-        (cd ../../.. && ./ninja launcher:uv_universal)
-
         # Ensure output directory exists
         mkdir -p "$OUTPUT_DIR"
 
@@ -168,8 +185,11 @@ jobs:
             "$CARGO_TARGET_DIR/x86_64-apple-darwin/release/launcher" \
             -output "$APP_LAUNCHER/Contents/MacOS/launcher"
 
-        # Copy UV
-        cp "$OUTPUT_DIR/uv" "$APP_LAUNCHER/Contents/MacOS/"
+        # Copy UV (the pinned universal binary lipo'd in the "Extract UV
+        # binaries" step; upstream's ninja launcher:uv_universal bootstrap is
+        # deliberately not used -- it would ship anki's own older uv pin and
+        # costs significant build time/disk on the space-starved runner)
+        cp ../../../out/uv "$APP_LAUNCHER/Contents/MacOS/"
 
         # Build install_name_tool stub
         clang -arch arm64 -o "$OUTPUT_DIR/stub_arm64" stub.c
@@ -195,11 +215,6 @@ jobs:
                 cp "../../../patches/0B_anki_qt_window/$patch" "$APP_LAUNCHER/Contents/Resources/patches/" || \
                 echo "Warning: $patch not found"
         done
-
-        # When anki_branding.patch is created:
-        # [ -f "../../../patches/0A_anki_branding/anki_branding.patch" ] && \
-        #     cp ../../../patches/0A_anki_branding/anki_branding.patch "$APP_LAUNCHER/Contents/Resources/patches/" || \
-        #     echo "Warning: anki_branding.patch not found"
 
         # Skip codesigning if NODMG is set
         if [ -n "$NODMG" ]; then
@@ -330,7 +345,7 @@ jobs:
         find out/launcher -mindepth 1 -maxdepth 1 ! -name Anki.app -exec rm -rf {} + 2>/dev/null || true
         echo "Disk before DMG:"; df -h .
 
-        DMG_NAME="anki-launcher-mac.dmg"
+        DMG_NAME="anki-launcher-${ANKI_VERSION}-mac.dmg"
         echo "Creating DMG: $DMG_NAME"
 
         # Stage with MOVE, not copy: copying briefly doubles the
@@ -339,6 +354,10 @@ jobs:
         # preserved; we only need the DMG afterwards.
         mkdir -p dmg_stage
         mv out/launcher/Anki.app dmg_stage/
+        # AGPL conveyance: ship the license text alongside the app. Files
+        # outside the .app do not affect the bundle signature; the DMG is
+        # notarized afterwards as before.
+        cp "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" dmg_stage/
 
         hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO "out/launcher/$DMG_NAME"
 
@@ -355,7 +374,7 @@ jobs:
         AC_API_ISSUER_ID: ${{ secrets.AC_API_ISSUER_ID }}
       run: |
         set -euo pipefail
-        DMG="out/launcher/anki-launcher-mac.dmg"
+        DMG="out/launcher/anki-launcher-${ANKI_VERSION}-mac.dmg"
         KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
 
         # Decode the App Store Connect API key
@@ -403,8 +422,8 @@ jobs:
       run: |
         mkdir -p artifacts
         # Copy the DMG we created
-        if [ -f "anki-source/out/launcher/anki-launcher-mac.dmg" ]; then
-          cp anki-source/out/launcher/anki-launcher-mac.dmg artifacts/
+        if [ -f "anki-source/out/launcher/anki-launcher-${ANKI_VERSION}-mac.dmg" ]; then
+          cp "anki-source/out/launcher/anki-launcher-${ANKI_VERSION}-mac.dmg" artifacts/
           echo "DMG copied to artifacts"
         else
           echo "Error: DMG not found"
@@ -412,15 +431,16 @@ jobs:
           ls -la anki-source/out/launcher/ || echo "Directory not found"
           exit 1
         fi
+        cp LICENSE NOTICE artifacts/
 
     - name: Generate Checksums
       shell: bash
       run: |
         cd artifacts
-        if [ -f "anki-launcher-mac.dmg" ]; then
-          shasum -a 256 anki-launcher-mac.dmg > anki-launcher-mac.dmg.sha256
+        if [ -f "anki-launcher-${ANKI_VERSION}-mac.dmg" ]; then
+          shasum -a 256 "anki-launcher-${ANKI_VERSION}-mac.dmg" > "anki-launcher-${ANKI_VERSION}-mac.dmg.sha256"
           echo "Checksum generated:"
-          cat anki-launcher-mac.dmg.sha256
+          cat "anki-launcher-${ANKI_VERSION}-mac.dmg.sha256"
         else
           echo "Error: DMG not found in artifacts"
           ls -la
@@ -428,7 +448,7 @@ jobs:
         fi
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ankiblur-launcher-macos
         path: artifacts/
