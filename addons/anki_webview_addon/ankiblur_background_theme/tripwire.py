@@ -8,6 +8,7 @@
 
 import json
 import os
+import sys
 import traceback
 
 from aqt import mw, gui_hooks
@@ -176,6 +177,8 @@ def report_fatal(exc: BaseException) -> None:
     try:
         gui_hooks.main_window_did_init.append(_later)
     except Exception:
-        traceback.print_exc()
+        # stdout, not stderr: stderr is intercepted by aqt's ErrorHandler,
+        # which would pop Anki's generic add-on-crash dialog on top of ours.
+        traceback.print_exc(file=sys.stdout)
         # Last resort: try to show it immediately.
         _show_warning(message)

@@ -14,6 +14,7 @@
 # that the blur actually engaged, showing a one-time non-blocking warning
 # if it did not.
 
+import sys
 import traceback
 
 try:
@@ -40,7 +41,13 @@ try:
         classes = []
         for module_name, attr in (
             ("aqt.deckbrowser", "DeckBrowser"),
+            # The bottom bar's web_context is a per-state class, not
+            # aqt.toolbar.BottomToolbar: deckbrowser.py passes
+            # DeckBrowserBottomBar and overview.py passes OverviewBottomBar
+            # (BottomToolbar is only Toolbar's never-used fallback default).
+            ("aqt.deckbrowser", "DeckBrowserBottomBar"),
             ("aqt.overview", "Overview"),
+            ("aqt.overview", "OverviewBottomBar"),
             ("aqt.reviewer", "Reviewer"),
             ("aqt.reviewer", "ReviewerBottomBar"),
             ("aqt.toolbar", "TopToolbar"),
@@ -237,7 +244,12 @@ try:
     def on_config():
         dialog = ColorConfigDialog(mw)
         if dialog.exec():
-            overlay.config = dialog.get_config()
+            # Merge the dialog's themes over the existing config so keys the
+            # dialog does not manage (e.g. linux_frameless) are preserved
+            # instead of being wiped from meta.json.
+            merged = dict(mw.addonManager.getConfig(__name__) or {})
+            merged.update(dialog.get_config())
+            overlay.config = merged
             mw.addonManager.writeConfig(__name__, overlay.config)
             showInfo("Color overlay settings updated! Restart Anki to see the changes.")
 
@@ -253,10 +265,12 @@ try:
     mw.addonManager.setConfigAction(__name__, on_config)
 
 except Exception as exc:  # noqa: BLE001 - never fail silently, never crash Anki
-    traceback.print_exc()
+    # stdout, not stderr: aqt's ErrorHandler intercepts stderr and would pop
+    # Anki's generic add-on-crash dialog on top of our own report_fatal one.
+    traceback.print_exc(file=sys.stdout)
     try:
         from . import tripwire
         tripwire.report_fatal(exc)
     except Exception:
         # Even the reporter is broken; the traceback above is all we have.
-        traceback.print_exc()
+        traceback.print_exc(file=sys.stdout)
