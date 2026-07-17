@@ -1,0 +1,26 @@
+--- originalAnkiProgramFiles/.venv/lib/python3.13/site-packages/aqt/main.py	2025-11-17 02:05:25.122591436 +0100
++++ v1/.venv/lib/python3.13/site-packages/aqt/main.py	2025-11-17 02:04:14.991712984 +0100
+@@ -192,6 +192,9 @@
+         args: list[Any],
+     ) -> None:
+         QMainWindow.__init__(self)
++        # Set window transparency for full transparency
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
++        self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
+         self.backend = backend
+         self.state: MainWindowState = "startup"
+         self.opts = opts
+@@ -959,6 +962,13 @@
+         # main window
+         self.form = aqt.forms.main.Ui_MainWindow()
+         self.form.setupUi(self)
++
++        # Add full window transparency
++        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
++        self.setWindowOpacity(0.0)
++
++        # Disable central widget auto-fill background
++        self.form.centralwidget.setAutoFillBackground(False)
+         # toolbar
+         tweb = self.toolbarWeb = TopWebView(self)
+         self.toolbar = Toolbar(self, tweb)

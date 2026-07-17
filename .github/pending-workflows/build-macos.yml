@@ -13,16 +13,21 @@ on:
     paths:
       - '.github/workflows/build-macos.yml'
       - 'patches/**'
+      - 'addons/**'
       - 'scripts/**'
   pull_request:
     branches: [ main ]
     paths:
       - '.github/workflows/build-macos.yml'
       - 'patches/**'
+      - 'addons/**'
       - 'scripts/**'
 
 env:
   ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
+  # Pinned uv release: releases/latest already broke the Windows workflow once
+  # (archive layout drift), and this binary ships (codesigned) inside the DMG.
+  UV_VERSION: '0.11.29'
 
 jobs:
   build-macos:
@@ -30,7 +35,7 @@ jobs:
 
     steps:
     - name: Checkout AnkiBlur Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
@@ -80,20 +85,6 @@ jobs:
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
 
-    - name: Setup macOS patches
-      run: |
-        # Copy macOS main.py patches to expected location
-        mkdir -p patches/0B_anki_qt_window
-        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib_main.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib64_main.patch \
-           patches/0B_anki_qt_window/
-        # Copy shared webview patches
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
-           patches/0B_anki_qt_window/
-
     - name: Validate and Apply Patches
       shell: bash
       run: |
@@ -107,22 +98,25 @@ jobs:
         # Create version file
         echo "${{ env.ANKI_VERSION }}" > .version
 
-        # Install UV for Python dependency management
-        curl -LsSf https://astral.sh/uv/install.sh | sh
+        # Install UV for Python dependency management (pinned, see env.UV_VERSION)
+        curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Extract UV binaries
       working-directory: anki-source
       run: |
+        set -euo pipefail
         # Create universal UV binary for macOS
         mkdir -p out
-        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-apple-darwin.tar.gz -o uv-x86_64.tar.gz
-        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-apple-darwin.tar.gz -o uv-aarch64.tar.gz
+        curl -L "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-apple-darwin.tar.gz" -o uv-x86_64.tar.gz
+        curl -L "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-aarch64-apple-darwin.tar.gz" -o uv-aarch64.tar.gz
 
         tar -xzf uv-x86_64.tar.gz
         tar -xzf uv-aarch64.tar.gz
 
         lipo -create uv-x86_64-apple-darwin/uv uv-aarch64-apple-darwin/uv -output out/uv
+        # Fail loudly now instead of a cryptic copy error later (mirrors Windows)
+        test -x out/uv || { echo "uv binary missing after lipo"; exit 1; }
 
     - name: Patch macOS Build Script
       shell: bash
@@ -184,22 +178,6 @@ jobs:
         cp ../pyproject.toml "$APP_LAUNCHER/Contents/Resources/"
         cp ../../../.python-version "$APP_LAUNCHER/Contents/Resources/"
         cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
-
-        # Copy patches directory for runtime patching
-        mkdir -p "$APP_LAUNCHER/Contents/Resources/patches"
-
-        # Copy all anki_qt_window patches
-        for patch in anki_qt_window_lib_main.patch anki_qt_window_lib_webview.patch \
-                     anki_qt_window_lib64_main.patch anki_qt_window_lib64_webview.patch; do
-            [ -f "../../../patches/0B_anki_qt_window/$patch" ] && \
-                cp "../../../patches/0B_anki_qt_window/$patch" "$APP_LAUNCHER/Contents/Resources/patches/" || \
-                echo "Warning: $patch not found"
-        done
-
-        # When anki_branding.patch is created:
-        # [ -f "../../../patches/0A_anki_branding/anki_branding.patch" ] && \
-        #     cp ../../../patches/0A_anki_branding/anki_branding.patch "$APP_LAUNCHER/Contents/Resources/patches/" || \
-        #     echo "Warning: anki_branding.patch not found"
 
         # Skip codesigning if NODMG is set
         if [ -n "$NODMG" ]; then
@@ -428,7 +406,7 @@ jobs:
         fi
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ankiblur-launcher-macos
         path: artifacts/

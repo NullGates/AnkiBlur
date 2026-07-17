@@ -1,0 +1,161 @@
+--- originalAnkiProgramFiles/.venv/Lib/site-packages/aqt/main.py
++++ v1/.venv/Lib/site-packages/aqt/main.py
+@@ -16,6 +16,15 @@
+ from concurrent.futures import Future
+ from typing import Any, Literal, TypeVar, cast
+ 
++# Windows native blur (acrylic/mica) support via pywinstyles (AnkiBlur)
++try:
++    import sys as _ankiblur_sys
++    import pywinstyles as _ankiblur_winstyles
++    _HAS_WIN_BLUR = _ankiblur_sys.platform == "win32"
++except Exception:
++    _HAS_WIN_BLUR = False
++
++
+ import anki
+ import anki.cards
+ import anki.sound
+@@ -103,6 +112,125 @@
+ 
+ 
+ T = TypeVar("T")
++
++
++def _ankiblur_is_dark_theme():
++    """Best-effort detection of Anki's current night mode, for the immersive
++    dark titlebar. Falls back to False (light) if anything is unavailable."""
++    try:
++        from aqt import mw
++        if mw is not None and getattr(mw, "pm", None) is not None:
++            return bool(mw.pm.night_mode())
++    except Exception:
++        pass
++    try:
++        from aqt.theme import theme_manager
++        return bool(theme_manager.night_mode)
++    except Exception:
++        return False
++
++
++def _ankiblur_setup_blur(window):
++    """Apply native Windows blur (acrylic/mica) to the AnkiQt main window
++    (AnkiBlur).
++
++    Strategy (works around the Qt6 + QWebEngineView issues on Windows):
++      * CSS backdrop-filter blur is unusable in QtWebEngine on Windows -- it
++        flickers badly (Anki upstream issue #4470, closed not-planned), so the
++        blur is applied natively to the top-level window via the DWM compositor
++        using pywinstyles (acrylic by default; mica/aero selectable).
++      * The Qt content view and the webview are made translucent (see the
++        shared webview patch) so the DWM-blurred desktop shows through.
++      * The native HWND is only stable after Anki finishes its own .show(), so
++        we retry on a QTimer just like the macOS path.
++    """
++    if not _HAS_WIN_BLUR:
++        print("[AnkiBlur] pywinstyles unavailable / not on Windows, no blur")
++        return
++    # The Qt content view must be translucent so DWM's blur shows through.
++    window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
++    from aqt.qt import QTimer
++    state = {"tries": 0}
++
++    def attempt():
++        try:
++            hwnd = int(window.winId())
++            if not hwnd:
++                raise RuntimeError("winId() not ready (0)")
++            import os
++            backdrop = os.environ.get(
++                "ANKIBLUR_BACKDROP", "acrylic"
++            ).strip().lower()
++            style_map = {
++                "acrylic": "acrylic",
++                "mica": "mica",
++                "aero": "aero",
++                "transparent": "transparent",
++                "auto": "acrylic",
++            }
++            style = style_map.get(backdrop, "acrylic")
++            # Titlebar theme / tint first, then the backdrop material last so
++            # the immersive-dark-mode call cannot clobber the blur.
++            _ankiblur_configure_blur(window)
++            _ankiblur_winstyles.apply_style(window, style)
++            print(
++                f"[AnkiBlur] native Windows blur applied "
++                f"({backdrop} -> {style})"
++            )
++            return
++        except Exception as e:
++            import traceback
++            print(f"[AnkiBlur] blur apply failed: {e}")
++            traceback.print_exc()
++        state["tries"] += 1
++        if state["tries"] < 15:
++            QTimer.singleShot(100, attempt)
++        else:
++            print("[AnkiBlur] giving up after 15 retries")
++
++    # 150ms lets Anki finish its own .show() before we touch the HWND.
++    QTimer.singleShot(150, attempt)
++
++
++def _ankiblur_configure_blur(window):
++    """Apply env-var-controlled tuning to the Windows native blur.
++
++    Env vars (all optional, read at startup):
++
++        ANKIBLUR_BACKDROP   str   acrylic (default) | mica | aero |
++                                  transparent | auto. Selects the DWM material
++                                  applied via pywinstyles.
++        ANKIBLUR_DARK       1/0   Force the immersive dark titlebar on/off.
++                                  When unset, follows Anki's night mode.
++        ANKIBLUR_TINT       hex   #RRGGBB or #RRGGBBAA title-bar tint, best
++                                  effort via pywinstyles.change_header_color.
++    """
++    if not _HAS_WIN_BLUR:
++        return
++    try:
++        import os
++        dark_env = os.environ.get("ANKIBLUR_DARK")
++        if dark_env is not None:
++            dark = dark_env.strip().lower() in ("1", "true", "yes", "on")
++        else:
++            dark = _ankiblur_is_dark_theme()
++        try:
++            _ankiblur_winstyles.apply_style(
++                window, "dark" if dark else "light"
++            )
++            print(f"[AnkiBlur] titlebar {'dark' if dark else 'light'}")
++        except Exception as e:
++            print(f"[AnkiBlur] titlebar theme failed: {e}")
++        if (v := os.environ.get("ANKIBLUR_TINT")) is not None:
++            try:
++                _ankiblur_winstyles.change_header_color(window, v)
++                print(f"[AnkiBlur] change_header_color({v})")
++            except Exception as e:
++                print(f"[AnkiBlur] change_header_color failed: {e}")
++    except Exception as e:
++        import traceback
++        print(f"[AnkiBlur] blur configure failed: {e}")
++        traceback.print_exc()
+ 
+ 
+ class MainWebView(AnkiWebView):
+@@ -959,6 +1087,16 @@
+         # main window
+         self.form = aqt.forms.main.Ui_MainWindow()
+         self.form.setupUi(self)
++
++        # AnkiBlur (Windows): do NOT autofill the centralwidget background;
++        # otherwise it paints opaque over the DWM blur even with
++        # WA_TranslucentBackground set.
++        if hasattr(self.form, 'centralwidget'):
++            self.form.centralwidget.setAutoFillBackground(False)
++        # AnkiBlur (Windows): apply native DWM blur on the HWND via pywinstyles.
++        # Keeps the native titlebar (no FramelessWindowHint, no
++        # setWindowOpacity) -- DWM needs a normal, non-zero-opacity window.
++        _ankiblur_setup_blur(self)
+         # toolbar
+         tweb = self.toolbarWeb = TopWebView(self)
+         self.toolbar = Toolbar(self, tweb)
