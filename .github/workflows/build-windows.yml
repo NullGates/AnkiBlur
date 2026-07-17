@@ -9,9 +9,7 @@ on:
         default: '25.09'
         type: string
   push:
-    # TEMPORARY: ci/windows-build is listed so pushes to the CI test branch
-    # trigger this workflow without workflow_dispatch. REVERT BEFORE MERGE.
-    branches: [ main, ci/windows-build ]
+    branches: [ main ]
     paths:
       - '.github/workflows/build-windows.yml'
       - 'patches/**'
