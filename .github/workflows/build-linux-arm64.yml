@@ -27,6 +27,9 @@ on:
 
 env:
   ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
+  # Pinned uv release: releases/latest already broke the Windows workflow once
+  # (archive layout drift), and this binary ships inside the artifact.
+  UV_VERSION: '0.11.29'
 
 jobs:
   build-linux-arm64:
@@ -34,7 +37,7 @@ jobs:
 
     steps:
     - name: Checkout AnkiBlur Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
@@ -68,16 +71,19 @@ jobs:
         # Create version file
         echo "${{ env.ANKI_VERSION }}" > .version
 
-        # Install UV for Python dependency management
-        curl -LsSf https://astral.sh/uv/install.sh | sh
+        # Install UV for Python dependency management (pinned, see env.UV_VERSION)
+        curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Extract UV binaries
       working-directory: anki-source
       run: |
+        set -euo pipefail
         mkdir -p out/extracted/uv
-        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-unknown-linux-gnu.tar.gz -o uv-arm64.tar.gz
+        curl -L "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-aarch64-unknown-linux-gnu.tar.gz" -o uv-arm64.tar.gz
         tar -xzf uv-arm64.tar.gz --strip-components=1 -C out/extracted/uv
+        # Fail loudly now instead of a cryptic copy error later (mirrors Windows)
+        test -x out/extracted/uv/uv || { echo "uv binary missing after extract"; exit 1; }
 
     - name: Patch Build Script for Native-Only Build
       shell: bash
@@ -190,7 +196,7 @@ jobs:
       # Upload whatever made it into artifacts/ even if packaging failed, so a
       # transient appimagetool fetch can't drop the already-built tarball/.deb/.rpm.
       if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ankiblur-launcher-linux-arm64
         path: artifacts/
