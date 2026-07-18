@@ -1,6 +1,6 @@
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/cleanup.rs v1_edit/qt/launcher/src/cleanup.rs
 --- original/qt/launcher/src/cleanup.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v1_edit/qt/launcher/src/cleanup.rs	2026-07-18 00:07:26.985965670 +0200
++++ v1_edit/qt/launcher/src/cleanup.rs	2026-07-18 04:57:00.597107612 +0200
 @@ -0,0 +1,165 @@
 +// AnkiBlur: one-time repair of venvs that were modified in place by the old
 +// (pre-addon) site-packages text-patching scheme. Old launcher versions
@@ -168,8 +168,8 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +    MARKERS.iter().any(|marker| text.contains(marker))
 +}
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/main.rs v1_edit/qt/launcher/src/main.rs
---- original/qt/launcher/src/main.rs	2026-07-18 00:07:03.384898103 +0200
-+++ v1_edit/qt/launcher/src/main.rs	2026-07-18 00:07:56.659652279 +0200
+--- original/qt/launcher/src/main.rs	2026-07-18 04:45:23.696108176 +0200
++++ v1_edit/qt/launcher/src/main.rs	2026-07-18 04:57:10.613895642 +0200
 @@ -28,6 +28,7 @@
  use crate::platform::launch_anki_normally;
  use crate::platform::respawn_launcher;
@@ -191,7 +191,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
      let launcher_requested =
          state.launcher_trigger_file.exists() || !state.user_pyproject_path.exists();
  
-@@ -738,7 +745,12 @@
+@@ -738,7 +745,11 @@
                          "  \"pyqt6-qt6==6.6.2\",\n",
                          "  \"pyqt6-webengine==6.6.0\",\n",
                          "  \"pyqt6-webengine-qt6==6.6.2\",\n",
@@ -200,12 +200,11 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +                        "  \"pyobjc-core; sys_platform == 'darwin'\",\n",
 +                        "  \"pyobjc-framework-Cocoa; sys_platform == 'darwin'\",\n",
 +                        "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'\",\n",
-+                        "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin' and python_version >= '3.12'\",\n",
-+                        "  \"pywinstyles==1.8; sys_platform == 'win32'"
++                        "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin' and python_version >= '3.12'"
                      ),
                      version
                  ),
-@@ -746,7 +758,19 @@
+@@ -746,7 +757,18 @@
          }
          VersionKind::Uv(version) => content_str.replace(
              "anki-release",
@@ -218,8 +217,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
 +                    "  \"pyobjc-core; sys_platform == 'darwin'\",\n",
 +                    "  \"pyobjc-framework-Cocoa; sys_platform == 'darwin'\",\n",
 +                    "  \"pyobjc-framework-Quartz; sys_platform == 'darwin'\",\n",
-+                    "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin' and python_version >= '3.12'\",\n",
-+                    "  \"pywinstyles==1.8; sys_platform == 'win32'"
++                    "  \"pyqt-liquidglass==0.1.0; sys_platform == 'darwin' and python_version >= '3.12'"
 +                ),
 +                version, version, version
 +            ),
