@@ -90,10 +90,18 @@ def check(ops: dict) -> None:
         traceback.print_exc()
 
 
+def _ok(status) -> bool:
+    # Plain "ok", or "ok: <detail>" (e.g. the Windows strategy records which
+    # native blur backend engaged as "ok: backend=accent-acrylic").
+    return isinstance(status, str) and (
+        status == "ok" or status.startswith("ok:")
+    )
+
+
 def _check_inner(ops: dict) -> None:
     from . import window_effects
 
-    failing = {op: status for op, status in ops.items() if status != "ok"}
+    failing = {op: status for op, status in ops.items() if not _ok(status)}
 
     # Computed probes, independent of what the ops recorded:
     # 1. main-window translucency must actually be set - unless the
@@ -120,6 +128,28 @@ def _check_inner(ops: dict) -> None:
             )
     except Exception as e:
         failing["probe_page_alpha"] = f"failed: {e}"
+
+    # 3. Windows: the win_native strategy must have engaged one of its blur
+    #    backends (accent-acrylic / accent-blur / dwm / mica1029, or "none"
+    #    when the user explicitly disabled the blur - that is deliberate,
+    #    not a failure). Warn only when NO backend engaged at all; skipped
+    #    when the strategy already gave up (translucency_expected() False,
+    #    and the give-up is a failing op).
+    if sys.platform == "win32":
+        try:
+            if window_effects.translucency_expected():
+                backend = getattr(mw, "_ankiblur_backend", None)
+                if backend is None:
+                    failing["probe_win_backend"] = (
+                        "failed: no native blur backend engaged on the "
+                        "main window"
+                    )
+                else:
+                    print(
+                        f"[AnkiBlur] windows blur backend engaged: {backend}"
+                    )
+        except Exception as e:
+            failing["probe_win_backend"] = f"failed: {e}"
 
     anki_version = _anki_version()
     state = _load_state()
