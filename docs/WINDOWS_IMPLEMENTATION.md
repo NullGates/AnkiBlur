@@ -4,6 +4,16 @@
 Windows 11 23H2 build 22631). 18/19 automated behavior checks pass; the 19th
 (snap-layouts flyout) passes with a real mouse and was confirmed by the user.
 
+> **RELEASE GATE — the transplant itself is NOT yet Windows-verified.** The
+> "WORKING" verification above applies to the original *inline* `aqt/main.py`
+> implementation on the original machine. The transplanted add-on version in
+> this tree (`win_native.py` + the new adaptation layer: `install_window_chrome`,
+> `seed_env_from_config`, the `_apply_windows` orchestration) has **never been
+> executed on a real Windows machine**. Before including it in any release, a
+> human MUST run `addons/anki_webview_addon/dev-tests/native_test.py` against a
+> live AnkiBlur on real Windows and get >= 18/19 (the snap-layouts flyout check
+> requires a real mouse — finding 9).
+
 > **Where the code lives now.** This document was written as the handoff for
 > an implementation developed *inline* in the installed `aqt/main.py` on a
 > live Windows machine. That implementation has since been transplanted,

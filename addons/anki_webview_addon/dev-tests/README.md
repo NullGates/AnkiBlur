@@ -6,6 +6,12 @@ window implemented in
 `docs/WINDOWS_IMPLEMENTATION.md` (read it first - especially the "Verified
 findings" section).
 
+**RELEASE GATE:** the transplanted add-on version of the Windows code has
+never been executed on a real Windows machine (only the original inline
+implementation was). Before it ships in any release, a human MUST run
+`native_test.py` against a live AnkiBlur on real Windows and get >= 18/19
+(the snap-layouts flyout check needs a real mouse - finding 9).
+
 These files live OUTSIDE the add-on source directory on purpose:
 `scripts/build-addon-zip.py` packages only
 `addons/anki_webview_addon/ankiblur_background_theme/`, so nothing here can
