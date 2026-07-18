@@ -47,7 +47,7 @@ env:
 jobs:
   # Pinned aqt: must always pass; gates releases (release.yml `needs` this).
   addon-pinned:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -188,7 +188,7 @@ jobs:
     if: >-
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
       && github.workflow == 'Test addon against real aqt'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
