@@ -7,5 +7,15 @@
         "color": "#1a1a2e",
         "alpha": 25
     },
-    "linux_frameless": false
+    "linux_frameless": false,
+    "windows": {
+        "backend": "auto",
+        "backdrop": "acrylic",
+        "accent_tint": "",
+        "accent_alpha": 153,
+        "border": "none",
+        "corners": "round",
+        "drag_fix": true,
+        "legacy_grips": false
+    }
 }

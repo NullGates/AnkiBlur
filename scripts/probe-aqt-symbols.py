@@ -53,6 +53,11 @@ CHECKS: list[tuple[str, str, str]] = [
     ("aqt/webview.py", "class_member", "AnkiWebViewKind.MAIN"),
     ("aqt/webview.py", "class_member", "AnkiWebViewKind.TOP_TOOLBAR"),
     ("aqt/webview.py", "class_member", "AnkiWebViewKind.BOTTOM_TOOLBAR"),
+    # aqt/main.py — the Windows-native strategy (win_native.py) hangs its
+    # state off mw and reads these AnkiQt attributes
+    ("aqt/main.py", "module_name", "AnkiQt"),
+    ("aqt/main.py", "self_attr", "AnkiQt.form"),
+    ("aqt/main.py", "self_attr", "AnkiQt.fullscreen"),
     # aqt/gui_hooks.py — hooks appended by __init__.py and tripwire.py
     ("aqt/gui_hooks.py", "hook_name", "main_window_did_init"),
     ("aqt/gui_hooks.py", "hook_name", "webview_will_set_content"),

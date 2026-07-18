@@ -253,8 +253,9 @@ try:
             mw.addonManager.writeConfig(__name__, overlay.config)
             showInfo("Color overlay settings updated! Restart Anki to see the changes.")
 
-    # op_id -> "ok" | "symbol_missing" | "failed: <msg>". Shared with the
-    # async retry loops in window_effects; tripwire reads it after startup.
+    # op_id -> "ok" | "ok: <detail>" | "symbol_missing" | "failed: <msg>".
+    # Shared with the async retry loops in window_effects; tripwire reads it
+    # after startup.
     ops = {}
 
     overlay = TransparentOverlay()

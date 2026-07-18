@@ -4,8 +4,8 @@
 # at add-on import time (the main window exists but is not yet shown).
 #
 # Every operation records its outcome into the shared `ops` dict
-# ("ok" | "symbol_missing" | "failed: <msg>"); tripwire.py surfaces
-# failures to the user after startup.
+# ("ok" | "ok: <detail>" | "symbol_missing" | "failed: <msg>"); tripwire.py
+# surfaces failures to the user after startup.
 
 import os
 import sys
@@ -13,6 +13,11 @@ import traceback
 
 from aqt import mw
 from aqt.qt import Qt, QTimer
+
+# Imported eagerly (not just inside _apply_windows) so the Linux offscreen CI
+# job exercises the module's import path; everything Windows-only inside it is
+# guarded behind sys.platform checks.
+from . import win_native
 
 # True while we expect WA_TranslucentBackground to be set on the main
 # window. Cleared when a native-effect backend gives up and we deliberately
@@ -95,133 +100,79 @@ def _apply_linux(ops: dict) -> None:
 # Windows
 # ---------------------------------------------------------------------------
 
-def _is_dark_theme() -> bool:
-    """Best-effort detection of Anki's current night mode, for the immersive
-    dark titlebar. Falls back to False (light) if anything is unavailable."""
-    try:
-        if mw is not None and getattr(mw, "pm", None) is not None:
-            return bool(mw.pm.night_mode())
-    except Exception:
-        pass
-    try:
-        from aqt.theme import theme_manager
-        return bool(theme_manager.night_mode)
-    except Exception:
-        return False
-
-
 def _apply_windows(ops: dict) -> None:
-    """Apply native Windows blur (acrylic/mica) to the main window.
+    """Apply the Windows-native blur + frameless native frame to the main
+    window (win_native.py -- the verified transplant described in
+    docs/WINDOWS_IMPLEMENTATION.md; no pywinstyles).
 
     Strategy (works around the Qt6 + QWebEngineView issues on Windows):
       * CSS backdrop-filter blur is unusable in QtWebEngine on Windows -- it
         flickers badly (Anki upstream issue #4470, closed not-planned), so the
-        blur is applied natively to the top-level window via the DWM compositor
-        using pywinstyles (acrylic by default; mica/aero selectable).
-      * The Qt content view and the webviews are made translucent so the
-        DWM-blurred desktop shows through.
+        blur is applied natively to the HWND: tiered accent-policy backends
+        (accent-acrylic default, accent-blur fallback; DWM/mica only on
+        explicit request -- DWM backdrops do not render behind Qt's layered
+        windows).
+      * Qt6 only composites WA_TranslucentBackground with the backdrop on a
+        FRAMELESS window, so the window goes frameless pre-show and
+        win_native's zero-strip native frame + custom title bar restore
+        native behavior (Aero Snap, snap layouts, native maximize, edge
+        resize, system menu).
       * The native HWND is only stable after Anki finishes its own .show(), so
-        we retry on a QTimer.
-      * Keeps the native titlebar (no FramelessWindowHint, no
-        setWindowOpacity) -- DWM needs a normal, non-zero-opacity window.
+        the backdrop application retries on a QTimer (150 ms + up to 15 x
+        100 ms); every attempt is idempotent.
     """
+    # Config "windows" section -> ANKIBLUR_* env vars (env always wins).
     try:
-        import pywinstyles
+        win_native.seed_env_from_config(_get_config())
     except Exception:
-        # Do NOT set WA_TranslucentBackground without the acrylic behind it:
-        # that leaves an unreadable, hole-punched window. Fall back to fully
-        # stock rendering and let the tripwire show a visible warning.
-        ops["pywinstyles_import"] = "symbol_missing"
-        ops["win_acrylic"] = (
-            "failed: pywinstyles is missing - blur disabled; "
-            "reinstall via the AnkiBlur launcher"
-        )
-        print("[AnkiBlur] pywinstyles is missing - blur disabled; "
-              "reinstall via the AnkiBlur launcher")
-        return
-    ops["pywinstyles_import"] = "ok"
+        traceback.print_exc()
 
     try:
         _set_translucent()
         if hasattr(mw.form, "centralwidget"):
             mw.form.centralwidget.setAutoFillBackground(False)
+        # Frameless flag, WA_NoSystemBackground, custom title bar above the
+        # menubar, repaint helpers, optional legacy grips - all pre-show.
+        win_native.install_window_chrome(mw)
+        ops["win_frameless"] = "ok"
     except Exception as e:
         traceback.print_exc()
-        ops["win_acrylic"] = f"failed: {e}"
+        ops["win_frameless"] = f"failed: {e}"
+        ops["win_blur"] = "failed: window chrome setup failed"
+        # Do NOT leave a translucent window without the blur behind it.
+        try:
+            _set_translucent(clear=True)
+            win_native.remove_window_chrome(mw)
+        except Exception:
+            traceback.print_exc()
         return
 
-    ops["win_acrylic"] = "failed: not applied yet"
+    ops["win_blur"] = "failed: not applied yet"
     state = {"tries": 0}
-
-    def configure_blur() -> None:
-        """Env-var-controlled tuning of the Windows native blur.
-
-        Env vars (all optional, read at startup):
-
-            ANKIBLUR_BACKDROP   str   acrylic (default) | mica | aero |
-                                      transparent | auto. Selects the DWM
-                                      material applied via pywinstyles.
-            ANKIBLUR_DARK       1/0   Force the immersive dark titlebar on/off.
-                                      When unset, follows Anki's night mode.
-            ANKIBLUR_TINT       hex   #RRGGBB or #RRGGBBAA title-bar tint, best
-                                      effort via pywinstyles.change_header_color.
-        """
-        dark_env = os.environ.get("ANKIBLUR_DARK")
-        if dark_env is not None:
-            dark = dark_env.strip().lower() in ("1", "true", "yes", "on")
-        else:
-            dark = _is_dark_theme()
-        try:
-            pywinstyles.apply_style(mw, "dark" if dark else "light")
-            print(f"[AnkiBlur] titlebar {'dark' if dark else 'light'}")
-        except Exception as e:
-            print(f"[AnkiBlur] titlebar theme failed: {e}")
-        if (v := os.environ.get("ANKIBLUR_TINT")) is not None:
-            try:
-                pywinstyles.change_header_color(mw, v)
-                print(f"[AnkiBlur] change_header_color({v})")
-            except Exception as e:
-                print(f"[AnkiBlur] change_header_color failed: {e}")
 
     def attempt() -> None:
         try:
-            hwnd = int(mw.winId())
-            if not hwnd:
-                raise RuntimeError("winId() not ready (0)")
-            backdrop = os.environ.get(
-                "ANKIBLUR_BACKDROP", "acrylic"
-            ).strip().lower()
-            style_map = {
-                "acrylic": "acrylic",
-                "mica": "mica",
-                "aero": "aero",
-                "transparent": "transparent",
-                "auto": "acrylic",
-            }
-            style = style_map.get(backdrop, "acrylic")
-            # Titlebar theme / tint first, then the backdrop material last so
-            # the immersive-dark-mode call cannot clobber the blur.
-            configure_blur()
-            pywinstyles.apply_style(mw, style)
-            ops["win_acrylic"] = "ok"
-            print(
-                f"[AnkiBlur] native Windows blur applied "
-                f"({backdrop} -> {style})"
-            )
+            win_native._ankiblur_apply_backdrop(mw)
+            # Report which backend engaged (tripwire treats any "ok..." as
+            # passing and surfaces the backend in its state/log).
+            backend = getattr(mw, "_ankiblur_backend", "unknown")
+            ops["win_blur"] = f"ok: backend={backend}"
             return
         except Exception as e:
-            print(f"[AnkiBlur] blur apply failed: {e}")
+            print(f"[AnkiBlur] backdrop apply failed: {e}")
             traceback.print_exc()
         state["tries"] += 1
         if state["tries"] < 15:
             QTimer.singleShot(100, attempt)
         else:
-            # Give up cleanly: a translucent window without acrylic behind it
-            # is a see-through hole, so restore an opaque window.
+            # Give up cleanly: a translucent frameless window without the
+            # blur/native frame behind it is a see-through hole with no
+            # usable chrome, so restore an opaque, natively-framed window.
             print("[AnkiBlur] giving up after 15 retries")
-            ops["win_acrylic"] = "failed: gave up after 15 retries"
+            ops["win_blur"] = "failed: gave up after 15 retries"
             try:
                 _set_translucent(clear=True)
+                win_native.remove_window_chrome(mw)
                 mw.update()
             except Exception:
                 traceback.print_exc()
