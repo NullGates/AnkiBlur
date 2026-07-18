@@ -23,6 +23,10 @@ on:
 
 permissions:
   contents: write
+  # Not used by the release itself: the called test-runtime-patches.yml
+  # declares issues:write for its (release-skipped) probe-latest job, and
+  # reusable-workflow permission validation runs before `if` evaluation.
+  issues: write
 
 concurrency:
   group: release-${{ github.ref }}
