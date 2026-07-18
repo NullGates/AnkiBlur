@@ -302,6 +302,26 @@ main() {
             || { log_error "Committed .ankiaddon is stale; run scripts/build-addon-zip.py and commit the result"; exit 1; }
         log_success "Addon zip staged: $ADDON_ZIP"
 
+        # CI-only, macOS-only: put scripts/ci (which contains an `hdiutil`
+        # wrapper) on the PATH of the workflow's LATER steps, so the frozen
+        # "Create DMG" step picks it up. hdiutil's -srcfolder auto-sizing
+        # intermittently undersizes the intermediate image and dies with
+        # "No space left on device" inside the mounted volume while the
+        # runner disk has >100Gi free (run 29621715081 failed where run
+        # 29621161026 passed on identical input bytes). The real fix is an
+        # explicit -size in the workflow step itself, but pushes from the CI
+        # credentials cannot touch .github/workflows/* (missing `workflow`
+        # OAuth scope — see .github/pending-workflows/README.md), so the shim
+        # injects the size from outside the frozen workflow. GITHUB_PATH is
+        # only set on Actions runners and only affects subsequent steps;
+        # local builds are untouched. The guard below makes deleting
+        # scripts/ci/ (once the pending workflows land) a silent no-op.
+        if [[ "$(uname -s)" == "Darwin" && -n "${GITHUB_PATH:-}" && -f "$REPO_ROOT/scripts/ci/hdiutil" ]]; then
+            log_info "Registering CI hdiutil shim for deterministic DMG sizing"
+            chmod +x "$REPO_ROOT/scripts/ci/hdiutil"
+            echo "$REPO_ROOT/scripts/ci" >> "$GITHUB_PATH"
+        fi
+
         # Clean up backup location file
         rm -f "$ANKI_SOURCE.backup_location"
 

@@ -318,7 +318,22 @@ jobs:
         mkdir -p dmg_stage
         mv out/launcher/Anki.app dmg_stage/
 
-        hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO "out/launcher/$DMG_NAME"
+        # Size the image EXPLICITLY. hdiutil's -srcfolder auto-sizing is not
+        # reliably sufficient: on identical input bytes, run 29621161026
+        # passed while run 29621715081 died with "hdiutil: create failed -
+        # No space left on device" inside the mounted intermediate volume
+        # (while the runner disk had 137Gi free). Sum the LOGICAL file sizes
+        # (st_size, immune to APFS clone/sparse undercounting) and add
+        # 25% + 128 MiB headroom; -size overrides the srcfolder estimate
+        # (same pattern as create-dmg and scripts/package-artifacts.sh).
+        # This makes scripts/ci/hdiutil (the interim shim that injected the
+        # size under the frozen workflows) a pass-through; delete it with
+        # this migration.
+        STAGE_BYTES=$(find dmg_stage -type f -print0 | xargs -0 stat -f %z | awk '{ s += $1 } END { printf "%d", s + 0 }')
+        DMG_SIZE_MB=$(( STAGE_BYTES / 1048576 + STAGE_BYTES / 4194304 + 128 ))
+        echo "Staged ${STAGE_BYTES} bytes; creating image with -size ${DMG_SIZE_MB}m"
+
+        hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO -size "${DMG_SIZE_MB}m" "out/launcher/$DMG_NAME"
 
         rm -rf dmg_stage
         echo "DMG created at out/launcher/$DMG_NAME"

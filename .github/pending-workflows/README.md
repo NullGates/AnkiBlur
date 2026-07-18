@@ -15,6 +15,14 @@ redesign was adapted so the unmodified workflows still build it correctly:
   `cp` them under `bash -e` and ship them next to the launcher. The redesigned
   launcher has no runtime patcher and ignores them; they are a few KB of inert
   bytes in the artifacts.
+- The macOS "Create DMG" fix (explicit `-size`; hdiutil's `-srcfolder`
+  auto-sizing intermittently undersizes the intermediate image — run
+  29621715081 failed with ENOSPC inside the mounted volume where run
+  29621161026 passed on identical bytes) is delivered under the frozen
+  workflow by `scripts/ci/hdiutil`, a wrapper that
+  `scripts/validate-and-apply-patches.sh` puts on later steps' PATH via
+  `GITHUB_PATH` (macOS CI only). The pending `build-macos.yml` passes
+  `-size` inline instead, which turns the shim into a pass-through.
 
 ## To apply (requires a push with `workflow`-scoped credentials)
 
@@ -26,6 +34,10 @@ Someone pushing with `workflow` scope (e.g. after
    (the pending workflows drop the "Setup … patches" copy steps, so the files
    must be deleted in the same commit or they simply go back to being unused)
 3. `git rm -r .github/pending-workflows`
+4. `git rm -r scripts/ci` (the interim hdiutil shim; the pending
+   `build-macos.yml` sizes the DMG inline, and the registration block in
+   `scripts/validate-and-apply-patches.sh` skips silently once the file is
+   gone — removing that block too is optional cleanup)
 
 What the pending versions change relative to `main`:
 
@@ -36,6 +48,8 @@ What the pending versions change relative to `main`:
 - bump `actions/checkout` and `actions/upload-artifact` to v5 (report L14)
 - add `probe-aqt-symbols.yml` (per-PR probe of the pinned aqt release plus a
   weekly probe of the newest release that opens a drift issue; report §3)
+- pass an explicit `-size` to `hdiutil create` in the macOS "Create DMG"
+  step (deterministic sizing; replaces the `scripts/ci/hdiutil` shim)
 
 Until then, the only functional losses are: uv is unpinned in three workflows,
 addon-only changes don't auto-trigger builds (use `workflow_dispatch`), and the
