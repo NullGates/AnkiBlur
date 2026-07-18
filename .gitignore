@@ -1,0 +1,25 @@
+# --- Multi-GB local reference environments (ground truth, never commit) ---
+/anki_installed_env/
+/anki_src_repo/
+/launcher_linux_unpacked/
+
+# --- Local scratch / personal ---
+/.vscode/
+/TODO.md
+/ankiblur.nix
+/*.exe
+
+# --- Build / script outputs ---
+/artifacts/
+/anki-source*/
+
+# --- Patch-workshop scratch trees (original/edited sources used to regenerate diffs) ---
+patches/**/original*/
+patches/**/v[0-9]*/
+patches/**/cp_from_*/
+patches/**/archive/old_*/
+patches/**/archive/v[0-9]*/
+
+# --- Debris ---
+*.backup
+__pycache__/

@@ -1,0 +1,118 @@
+# Tag-triggered release: builds all platforms via workflow_call (NOT by
+# duplicating the build logic -- the macOS build alone is ~400 lines of
+# signing/notarization/disk-space surgery that has needed several fix commits;
+# a duplicated copy would rot immediately). workflow_call runs the called jobs
+# inside this same workflow run, so actions/download-artifact picks their
+# uploads up natively, and `secrets: inherit` carries the Apple signing
+# secrets.
+#
+# Tag scheme: v<ANKI_VERSION> with an optional -N repack suffix,
+# e.g. v25.09, v25.09-2.
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      anki_version:
+        description: 'Anki version'
+        required: true
+        default: '25.09'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prep:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      anki_version: ${{ steps.v.outputs.anki_version }}
+    steps:
+      - id: v
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ inputs.anki_version }}"
+          else
+            V="${GITHUB_REF_NAME#v}"; V="${V%%-*}"   # v25.09-2 -> 25.09
+          fi
+          echo "anki_version=$V" >> "$GITHUB_OUTPUT"
+          echo "Releasing Anki version: $V"
+
+  test-runtime-patches:
+    needs: prep
+    uses: ./.github/workflows/test-runtime-patches.yml
+
+  build-linux:
+    needs: prep
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      anki_version: ${{ needs.prep.outputs.anki_version }}
+    secrets: inherit
+
+  build-macos:
+    needs: prep
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      anki_version: ${{ needs.prep.outputs.anki_version }}
+    secrets: inherit
+
+  build-windows:
+    needs: prep
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      anki_version: ${{ needs.prep.outputs.anki_version }}
+    secrets: inherit
+
+  publish:
+    needs: [prep, test-runtime-patches, build-linux, build-macos, build-windows]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Assemble release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          # Real assets only; drop the per-build .sha256/.info noise (a single
+          # uniform SHA256SUMS ships instead).
+          find dist -type f \( -name '*.tar.zst' -o -name '*.deb' -o -name '*.rpm' \
+            -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.exe' \) -exec cp {} release/ \;
+          cp LICENSE NOTICE release/
+          cd release
+          ls -la
+          sha256sum -- * > SHA256SUMS
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          EXTRA=(--verify-tag)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Dispatch runs may predate the tag; don't require it to exist.
+            TAG="v${{ needs.prep.outputs.anki_version }}"
+            EXTRA=()
+          fi
+          # The `|| gh release upload --clobber` makes re-runs after a
+          # transient failure idempotent (release already exists -> just
+          # refresh the assets).
+          gh release create "$TAG" release/* \
+            --title "AnkiBlur $TAG" \
+            --generate-notes \
+            "${EXTRA[@]}" \
+            || gh release upload "$TAG" release/* --clobber
