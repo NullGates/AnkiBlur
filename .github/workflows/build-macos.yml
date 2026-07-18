@@ -20,12 +20,14 @@ on:
       - '.github/workflows/build-macos.yml'
       - 'patches/**'
       - 'scripts/**'
+      - 'addons/**'
   pull_request:
     branches: [ main ]
     paths:
       - '.github/workflows/build-macos.yml'
       - 'patches/**'
       - 'scripts/**'
+      - 'addons/**'
 
 # Hardcoded workflow name in the group (not ${{ github.workflow }}): inside a
 # workflow_call callee that expression resolves to the CALLER's name, so all
@@ -98,20 +100,6 @@ jobs:
     - name: Download Anki Source
       run: |
         git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
-
-    - name: Setup macOS patches
-      run: |
-        # Copy macOS main.py patches to expected location
-        mkdir -p patches/0B_anki_qt_window
-        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib_main.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0B_MACOS_anki_qt_window_main/anki_qt_window_lib64_main.patch \
-           patches/0B_anki_qt_window/
-        # Copy shared webview patches
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
-           patches/0B_anki_qt_window/
 
     - name: Validate and Apply Patches
       shell: bash
@@ -205,16 +193,8 @@ jobs:
         cp ../../../.python-version "$APP_LAUNCHER/Contents/Resources/"
         cp ../versions.py "$APP_LAUNCHER/Contents/Resources/"
 
-        # Copy patches directory for runtime patching
-        mkdir -p "$APP_LAUNCHER/Contents/Resources/patches"
-
-        # Copy all anki_qt_window patches
-        for patch in anki_qt_window_lib_main.patch anki_qt_window_lib_webview.patch \
-                     anki_qt_window_lib64_main.patch anki_qt_window_lib64_webview.patch; do
-            [ -f "../../../patches/0B_anki_qt_window/$patch" ] && \
-                cp "../../../patches/0B_anki_qt_window/$patch" "$APP_LAUNCHER/Contents/Resources/patches/" || \
-                echo "Warning: $patch not found"
-        done
+        # No runtime patch staging: the blur payload ships as an Anki addon
+        # embedded in the launcher binary (include_bytes! in addon.rs).
 
         # Skip codesigning if NODMG is set
         if [ -n "$NODMG" ]; then
@@ -359,7 +339,19 @@ jobs:
         # notarized afterwards as before.
         cp "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" dmg_stage/
 
-        hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO "out/launcher/$DMG_NAME"
+        # Size the image EXPLICITLY. hdiutil's -srcfolder auto-sizing is not
+        # reliably sufficient: on identical input bytes, run 29621161026
+        # passed while run 29621715081 died with "hdiutil: create failed -
+        # No space left on device" inside the mounted intermediate volume
+        # (while the runner disk had 137Gi free). Sum the LOGICAL file sizes
+        # (st_size, immune to APFS clone/sparse undercounting) and add
+        # 25% + 128 MiB headroom; -size overrides the srcfolder estimate
+        # (same pattern as create-dmg and scripts/package-artifacts.sh).
+        STAGE_BYTES=$(find dmg_stage -type f -print0 | xargs -0 stat -f %z | awk '{ s += $1 } END { printf "%d", s + 0 }')
+        DMG_SIZE_MB=$(( STAGE_BYTES / 1048576 + STAGE_BYTES / 4194304 + 128 ))
+        echo "Staged ${STAGE_BYTES} bytes; creating image with -size ${DMG_SIZE_MB}m"
+
+        hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO -size "${DMG_SIZE_MB}m" "out/launcher/$DMG_NAME"
 
         rm -rf dmg_stage
         echo "DMG created at out/launcher/$DMG_NAME"

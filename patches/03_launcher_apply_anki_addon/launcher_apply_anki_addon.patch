@@ -1,205 +1,399 @@
-diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' cp_from_02/qt/launcher/Cargo.toml v2_03_addon_from_02/qt/launcher/Cargo.toml
---- cp_from_02/qt/launcher/Cargo.toml	2025-11-17 16:23:04.230680960 +0100
-+++ v2_03_addon_from_02/qt/launcher/Cargo.toml	2025-11-17 16:20:47.887065275 +0100
-@@ -15,6 +15,8 @@
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/Cargo.toml v2_03_addon_from_02/qt/launcher/Cargo.toml
+--- cp_from_02/qt/launcher/Cargo.toml	2026-07-18 00:08:03.400311863 +0200
++++ v2_03_addon_from_02/qt/launcher/Cargo.toml	2026-07-18 00:09:04.502836393 +0200
+@@ -14,6 +14,7 @@
+ camino.workspace = true
  dirs.workspace = true
  serde_json.workspace = true
- diffy = "0.4"
-+reqwest = { version = "0.11", features = ["blocking"] }
 +zip = "0.6"
  
  [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
  libc.workspace = true
-diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' cp_from_02/qt/launcher/src/addon.rs v2_03_addon_from_02/qt/launcher/src/addon.rs
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/src/addon.rs v2_03_addon_from_02/qt/launcher/src/addon.rs
 --- cp_from_02/qt/launcher/src/addon.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v2_03_addon_from_02/qt/launcher/src/addon.rs	2025-11-17 16:32:45.071157959 +0100
-@@ -0,0 +1,166 @@
-+use std::path::{Path, PathBuf};
++++ v2_03_addon_from_02/qt/launcher/src/addon.rs	2026-07-18 00:08:46.313784170 +0200
+@@ -0,0 +1,359 @@
++// AnkiBlur: install the bundled blur/tint add-on into the user's Anki base.
++//
++// The .ankiaddon is embedded into the launcher binary at build time
++// (staged into qt/launcher/addon/ by scripts/validate-and-apply-patches.sh
++// before cargo runs); there is no runtime download.
++
 +use std::io::Cursor;
-+use anki_io::{write_file, create_dir_all, remove_dir_all};
-+use anyhow::{Context, Result};
++use std::io::Read;
++use std::path::Path;
++use std::path::PathBuf;
++
++use anki_io::create_dir_all;
++use anki_io::write_file;
++use anyhow::bail;
++use anyhow::Context;
++use anyhow::Result;
 +use zip::ZipArchive;
 +
-+/// Install the AnkiBlur background theme addon from GitHub
++static ADDON_ZIP: &[u8] = include_bytes!("../addon/ankiblur_background_theme.ankiaddon");
++
++const ADDON_DIR_NAME: &str = "ankiblur_background_theme";
++
++/// Files that must exist after extraction; their absence means the install
++/// went wrong and must fail loudly.
++const REQUIRED_FILES: &[&str] = &[
++    "__init__.py",
++    "manifest.json",
++    "config.json",
++    "window_effects.py",
++    "webview_transparency.py",
++    "tripwire.py",
++    "config_dialog.py",
++];
++
++/// User state that must survive reinstalls: meta.json carries the user's
++/// add-on config (addonManager.writeConfig) and enabled/disabled state;
++/// user_files carries the add-on's tripwire state. Matches Anki's own
++/// updater semantics.
++const PRESERVE: &[&str] = &["meta.json", "user_files"];
++
 +pub fn install_ankiblur_addon() -> Result<()> {
-+    println!("Installing AnkiBlur background theme addon...");
++    println!("Installing AnkiBlur background theme add-on...");
 +
-+    // Get the addon installation directory
-+    let addons_path = get_anki_addons21_path()?;
-+    if !addons_path.exists() {
-+        println!("Warning: Anki addons directory does not exist, skipping addon installation.");
-+        return Ok(());
-+    }
++    let addons_path = addons21_path()?;
++    // No existence check: aqt's add-on loader makedirs+iterates this
++    // directory itself, so pre-creating it is safe and means fresh machines
++    // (where Anki has never run) get the add-on too.
++    create_dir_all(&addons_path)?;
 +
-+    // Download the addon from GitHub
-+    let addon_data = download_ankiblur_addon()?;
++    let target = addons_path.join(ADDON_DIR_NAME);
++    install_addon_from_data(ADDON_ZIP, &target)?;
 +
-+    // Install the addon
-+    install_addon_from_data(&addon_data, &addons_path)?;
-+
-+    println!("AnkiBlur background theme addon installed successfully.");
++    println!("AnkiBlur add-on installed to: {}", target.display());
 +    Ok(())
 +}
 +
-+/// Download the AnkiBlur addon from GitHub
-+fn download_ankiblur_addon() -> Result<Vec<u8>> {
-+    let addon_url = "https://raw.githubusercontent.com/NullGates/AnkiBlur/main/addons/anki_webview_addon/ankiblur_background_theme.ankiaddon";
-+
-+    println!("Downloading addon from: {}", addon_url);
-+
-+    let response = reqwest::blocking::get(addon_url)
-+        .context("Failed to download addon from GitHub")?;
-+
-+    if !response.status().is_success() {
-+        return Err(anyhow::anyhow!(
-+            "Failed to download addon: HTTP status {}",
-+            response.status()
-+        ));
++/// Resolve the addons21 dir the way Anki does: ANKI_BASE first, then the
++/// platform default.
++fn addons21_path() -> Result<PathBuf> {
++    if let Ok(base) = std::env::var("ANKI_BASE") {
++        if !base.trim().is_empty() {
++            return Ok(PathBuf::from(base).join("addons21"));
++        }
 +    }
-+
-+    let addon_data = response.bytes()
-+        .context("Failed to read addon data from response")?;
-+
-+    println!("Successfully downloaded addon ({} bytes)", addon_data.len());
-+    Ok(addon_data.to_vec())
++    crate::get_anki_addons21_path()
 +}
 +
-+/// Install addon from downloaded data
-+fn install_addon_from_data(addon_data: &[u8], addons_path: &Path) -> Result<()> {
-+    // Create a cursor from the addon data for ZIP reading
-+    let cursor = Cursor::new(addon_data);
-+    let mut archive = ZipArchive::new(cursor)
-+        .context("Failed to open addon as ZIP archive")?;
++fn install_addon_from_data(data: &[u8], target: &Path) -> Result<()> {
++    let mut archive =
++        ZipArchive::new(Cursor::new(data)).context("opening bundled add-on zip")?;
 +
-+    // Extract addon directory name from the first file
-+    let addon_dir_name = if archive.len() > 0 {
-+        let first_file = archive.by_index(0)?;
-+        let file_path = Path::new(first_file.name());
-+
-+        // Get the top-level directory name
-+        if let Some(first_component) = file_path.components().next() {
-+            first_component.as_os_str().to_string_lossy().to_string()
-+        } else {
-+            "ankiblur_background_theme".to_string()
-+        }
-+    } else {
-+        return Err(anyhow::anyhow!("Addon archive is empty"));
-+    };
-+
-+    let addon_install_path = addons_path.join(&addon_dir_name);
-+
-+    // Remove existing addon if it exists
-+    if addon_install_path.exists() {
-+        println!("Removing existing addon: {}", addon_install_path.display());
-+        remove_dir_all(&addon_install_path)?;
-+    }
-+
-+    // Create addon directory
-+    create_dir_all(&addon_install_path)?;
-+
-+    // Extract all files
++    // Pass 1: zip-slip guard, plus zip-shape detection. `strip` is set only
++    // when ALL non-directory entries share one common top-level directory
++    // (folder-shaped zip); flat zips (files at the zip root, Anki's own
++    // .ankiaddon format) extract as-is.
++    let mut file_count = 0usize;
++    let mut strip: Option<String> = None;
++    let mut all_share_prefix = true;
 +    for i in 0..archive.len() {
-+        let mut file = archive.by_index(i)?;
-+        let file_path = Path::new(file.name());
-+
-+        // Skip the top-level directory in the path
-+        let relative_path = if file_path.components().count() > 1 {
-+            file_path.components().skip(1).collect::<PathBuf>()
-+        } else {
-+            continue; // Skip directory entries
++        let entry = archive.by_index(i)?;
++        let Some(safe_path) = entry.enclosed_name().map(Path::to_path_buf) else {
++            bail!("add-on zip contains an unsafe path: {}", entry.name());
 +        };
++        if entry.is_dir() {
++            continue;
++        }
++        file_count += 1;
++        let mut components = safe_path.components();
++        let first = components
++            .next()
++            .map(|c| c.as_os_str().to_string_lossy().to_string());
++        let nested = components.next().is_some();
++        match (first, nested) {
++            (Some(dir), true) => match &strip {
++                None => strip = Some(dir),
++                Some(existing) if *existing == dir => {}
++                Some(_) => all_share_prefix = false,
++            },
++            // Entry at the zip root -> flat zip.
++            _ => all_share_prefix = false,
++        }
++    }
++    if !all_share_prefix {
++        strip = None;
++    }
++    if file_count == 0 {
++        bail!("add-on zip contains no files");
++    }
 +
-+        let output_path = addon_install_path.join(&relative_path);
-+
-+        if file.name().ends_with('/') {
-+            // Directory
-+            create_dir_all(&output_path)?;
-+        } else {
-+            // File
-+            if let Some(parent) = output_path.parent() {
-+                create_dir_all(parent)?;
-+            }
-+
-+            // Read file content
-+            let mut file_content = Vec::new();
-+            std::io::copy(&mut file, &mut file_content)?;
-+
-+            // Write file
-+            write_file(&output_path, &file_content)?;
-+
-+            println!("Extracted: {}", relative_path.display());
++    // Don't downgrade a newer installed copy (e.g. from AnkiWeb), as long
++    // as it is complete.
++    let embedded_mod = manifest_mod_from_zip(&mut archive, &strip)?;
++    let installed_manifest = target.join("manifest.json");
++    if installed_manifest.exists() {
++        let installed_mod = std::fs::read(&installed_manifest)
++            .ok()
++            .map(|bytes| manifest_mod(&bytes))
++            .unwrap_or(0);
++        if installed_mod > embedded_mod
++            && REQUIRED_FILES.iter().all(|name| target.join(name).exists())
++        {
++            println!(
++                "Keeping newer installed AnkiBlur add-on (mod {installed_mod} > {embedded_mod})."
++            );
++            return Ok(());
 +        }
 +    }
 +
-+    println!("Addon installed to: {}", addon_install_path.display());
++    // Selective clean of any existing install: delete everything except the
++    // preserved user state (never a blanket remove_dir_all).
++    if target.exists() {
++        for entry in std::fs::read_dir(target)
++            .with_context(|| format!("reading {}", target.display()))?
++            .flatten()
++        {
++            let name = entry.file_name().to_string_lossy().to_string();
++            if PRESERVE.contains(&name.as_str()) {
++                continue;
++            }
++            let path = entry.path();
++            if path.is_dir() {
++                anki_io::remove_dir_all(&path)?;
++            } else {
++                anki_io::remove_file(&path)?;
++            }
++        }
++    }
++
++    // Pass 2: extraction.
++    let mut extracted = 0usize;
++    for i in 0..archive.len() {
++        let mut entry = archive.by_index(i)?;
++        if entry.is_dir() {
++            continue;
++        }
++        let safe_path = entry
++            .enclosed_name()
++            .map(Path::to_path_buf)
++            .context("unsafe path in add-on zip")?;
++        let relative: PathBuf = match &strip {
++            Some(prefix) => safe_path
++                .strip_prefix(prefix)
++                .unwrap_or(&safe_path)
++                .to_path_buf(),
++            None => safe_path,
++        };
++        if relative.as_os_str().is_empty() {
++            continue;
++        }
++        let dest = target.join(&relative);
++        if let Some(parent) = dest.parent() {
++            create_dir_all(parent)?;
++        }
++        let mut content = Vec::new();
++        entry.read_to_end(&mut content)?;
++        write_file(&dest, &content)?;
++        extracted += 1;
++    }
++
++    // Post-extract verification: never report success over a bad install.
++    if extracted == 0 {
++        bail!("no files were extracted from the add-on zip");
++    }
++    for name in REQUIRED_FILES {
++        if !target.join(name).exists() {
++            bail!(
++                "add-on install incomplete: {name} missing from {} (expected: {REQUIRED_FILES:?})",
++                target.display()
++            );
++        }
++    }
++
 +    Ok(())
 +}
 +
-+/// Get the Anki addons21 directory path
-+fn get_anki_addons21_path() -> Result<PathBuf> {
-+    let anki_base_path = get_anki_base_path()?;
-+    Ok(anki_base_path.join("addons21"))
++fn manifest_mod_from_zip(
++    archive: &mut ZipArchive<Cursor<&[u8]>>,
++    strip: &Option<String>,
++) -> Result<u64> {
++    let manifest_name = match strip {
++        Some(prefix) => format!("{prefix}/manifest.json"),
++        None => "manifest.json".to_string(),
++    };
++    match archive.by_name(&manifest_name) {
++        Ok(mut file) => {
++            let mut bytes = Vec::new();
++            file.read_to_end(&mut bytes)?;
++            Ok(manifest_mod(&bytes))
++        }
++        Err(_) => Ok(0),
++    }
 +}
 +
-+/// Get the Anki base directory path
-+fn get_anki_base_path() -> Result<PathBuf> {
-+    let anki_base_path = if cfg!(target_os = "windows") {
-+        // Windows: %APPDATA%\Anki2
-+        dirs::config_dir()
-+            .context("Unable to determine config directory")?
-+            .join("Anki2")
-+    } else if cfg!(target_os = "macos") {
-+        // macOS: ~/Library/Application Support/Anki2
-+        dirs::data_dir()
-+            .context("Unable to determine data directory")?
-+            .join("Anki2")
-+    } else {
-+        // Linux: ~/.local/share/Anki2
-+        dirs::data_dir()
-+            .context("Unable to determine data directory")?
-+            .join("Anki2")
-+    };
-+
-+    Ok(anki_base_path)
++/// The "mod" timestamp from a manifest.json, or 0 when absent/unparseable.
++fn manifest_mod(bytes: &[u8]) -> u64 {
++    serde_json::from_slice::<serde_json::Value>(bytes)
++        .ok()
++        .and_then(|value| value.get("mod").and_then(|m| m.as_u64()))
++        .unwrap_or(0)
 +}
 +
 +#[cfg(test)]
 +mod tests {
++    use std::io::Write;
++
++    use zip::write::FileOptions;
++    use zip::ZipWriter;
++
 +    use super::*;
 +
-+    #[test]
-+    fn test_get_anki_base_path() {
-+        let path = get_anki_base_path().unwrap();
-+        assert!(path.to_string_lossy().contains("Anki2"));
++    fn build_zip(entries: &[(&str, &str)]) -> Vec<u8> {
++        let mut buffer = Vec::new();
++        {
++            let mut writer = ZipWriter::new(Cursor::new(&mut buffer));
++            for (name, content) in entries {
++                writer.start_file(*name, FileOptions::default()).unwrap();
++                writer.write_all(content.as_bytes()).unwrap();
++            }
++            writer.finish().unwrap();
++        }
++        buffer
++    }
++
++    fn required_entries() -> Vec<(String, String)> {
++        REQUIRED_FILES
++            .iter()
++            .map(|name| {
++                let content = if *name == "manifest.json" {
++                    r#"{"package": "ankiblur_background_theme", "mod": 2}"#.to_string()
++                } else {
++                    format!("# {name}")
++                };
++                (name.to_string(), content)
++            })
++            .collect()
++    }
++
++    fn temp_target(test_name: &str) -> PathBuf {
++        let dir = std::env::temp_dir().join(format!(
++            "ankiblur-addon-test-{}-{test_name}",
++            std::process::id()
++        ));
++        let _ = std::fs::remove_dir_all(&dir);
++        dir.join(ADDON_DIR_NAME)
 +    }
 +
 +    #[test]
-+    fn test_get_anki_addons21_path() {
-+        let path = get_anki_addons21_path().unwrap();
-+        assert!(path.to_string_lossy().contains("Anki2"));
-+        assert!(path.to_string_lossy().contains("addons21"));
++    fn flat_zip_extracts_all_files() {
++        let entries = required_entries();
++        let borrowed: Vec<(&str, &str)> = entries
++            .iter()
++            .map(|(n, c)| (n.as_str(), c.as_str()))
++            .collect();
++        let data = build_zip(&borrowed);
++        let target = temp_target("flat");
++        install_addon_from_data(&data, &target).unwrap();
++        for name in REQUIRED_FILES {
++            assert!(target.join(name).is_file(), "{name} missing");
++        }
++    }
++
++    #[test]
++    fn folder_shaped_zip_strips_prefix() {
++        let entries: Vec<(String, String)> = required_entries()
++            .into_iter()
++            .map(|(name, content)| (format!("{ADDON_DIR_NAME}/{name}"), content))
++            .collect();
++        let borrowed: Vec<(&str, &str)> = entries
++            .iter()
++            .map(|(n, c)| (n.as_str(), c.as_str()))
++            .collect();
++        let data = build_zip(&borrowed);
++        let target = temp_target("folder");
++        install_addon_from_data(&data, &target).unwrap();
++        for name in REQUIRED_FILES {
++            assert!(target.join(name).is_file(), "{name} missing");
++        }
++        assert!(!target.join(ADDON_DIR_NAME).exists(), "prefix not stripped");
++    }
++
++    #[test]
++    fn zip_slip_is_rejected() {
++        let data = build_zip(&[("../evil.py", "boom")]);
++        let target = temp_target("slip");
++        assert!(install_addon_from_data(&data, &target).is_err());
++    }
++
++    #[test]
++    fn user_state_survives_reinstall() {
++        let entries = required_entries();
++        let borrowed: Vec<(&str, &str)> = entries
++            .iter()
++            .map(|(n, c)| (n.as_str(), c.as_str()))
++            .collect();
++        let data = build_zip(&borrowed);
++        let target = temp_target("preserve");
++        std::fs::create_dir_all(target.join("user_files")).unwrap();
++        std::fs::write(target.join("meta.json"), r#"{"config": {"alpha": 1}}"#).unwrap();
++        std::fs::write(target.join("user_files/x"), "state").unwrap();
++        std::fs::write(target.join("stale.py"), "old").unwrap();
++
++        install_addon_from_data(&data, &target).unwrap();
++
++        assert_eq!(
++            std::fs::read_to_string(target.join("meta.json")).unwrap(),
++            r#"{"config": {"alpha": 1}}"#
++        );
++        assert_eq!(
++            std::fs::read_to_string(target.join("user_files/x")).unwrap(),
++            "state"
++        );
++        assert!(!target.join("stale.py").exists(), "stale file not removed");
++        for name in REQUIRED_FILES {
++            assert!(target.join(name).is_file(), "{name} missing");
++        }
++    }
++
++    #[test]
++    fn verification_fails_on_incomplete_zip() {
++        let entries: Vec<(String, String)> = required_entries()
++            .into_iter()
++            .filter(|(name, _)| name != "__init__.py")
++            .collect();
++        let borrowed: Vec<(&str, &str)> = entries
++            .iter()
++            .map(|(n, c)| (n.as_str(), c.as_str()))
++            .collect();
++        let data = build_zip(&borrowed);
++        let target = temp_target("incomplete");
++        assert!(install_addon_from_data(&data, &target).is_err());
++    }
++
++    #[test]
++    fn embedded_zip_is_valid() {
++        let target = temp_target("embedded");
++        install_addon_from_data(ADDON_ZIP, &target).unwrap();
++        assert!(manifest_mod(&std::fs::read(target.join("manifest.json")).unwrap()) > 0);
 +    }
 +}
-\ No newline at end of file
-diff -ruN '--exclude=target' '--exclude=Cargo.lock' '--exclude=out' cp_from_02/qt/launcher/src/main.rs v2_03_addon_from_02/qt/launcher/src/main.rs
---- cp_from_02/qt/launcher/src/main.rs	2025-11-17 16:23:04.230264251 +0100
-+++ v2_03_addon_from_02/qt/launcher/src/main.rs	2025-11-17 16:20:47.887302610 +0100
-@@ -30,6 +30,7 @@
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/src/main.rs v2_03_addon_from_02/qt/launcher/src/main.rs
+--- cp_from_02/qt/launcher/src/main.rs	2026-07-18 00:08:03.402786068 +0200
++++ v2_03_addon_from_02/qt/launcher/src/main.rs	2026-07-18 00:09:04.507529908 +0200
+@@ -28,6 +28,7 @@
+ use crate::platform::launch_anki_normally;
+ use crate::platform::respawn_launcher;
  
- mod platform;
- mod patch;
 +mod addon;
+ mod cleanup;
+ mod platform;
  
- struct State {
-     current_version: Option<String>,
-@@ -356,6 +357,12 @@
-                 println!("Anki will continue without patches.");
+@@ -356,6 +357,15 @@
+                 }
              }
  
-+            // Install AnkiBlur addon from GitHub after patches
++            // Install the bundled AnkiBlur add-on
 +            if let Err(e) = addon::install_ankiblur_addon() {
-+                println!("Warning: Failed to install AnkiBlur addon: {e:#}");
-+                println!("Anki will continue without the addon.");
++                println!("\n*******************************************************");
++                println!("WARNING: AnkiBlur add-on install FAILED: {e:#}");
++                println!("Anki will start WITHOUT the blur/tint add-on.");
++                println!("Please report this at https://github.com/NullGates/AnkiBlur/issues");
++                println!("*******************************************************\n");
 +            }
 +
              Ok(())

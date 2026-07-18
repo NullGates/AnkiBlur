@@ -1,0 +1,22 @@
+# Force LF checkouts on every platform. The build is byte-sensitive in two
+# places: scripts/build-addon-zip.py zips the addon sources byte-for-byte
+# (deterministic zip, cmp-guarded against the committed .ankiaddon in
+# scripts/validate-and-apply-patches.sh), and the 01-03 patches must match
+# the upstream launcher sources exactly. Git for Windows defaults to
+# core.autocrlf=true, which otherwise checks text files out with CRLF and
+# breaks both (this exact failure: build-windows "Committed .ankiaddon is
+# stale"). In-repo attributes override the runner's autocrlf setting.
+* text=auto eol=lf
+
+# Patch files must stay byte-exact: their context lines mirror the target
+# files' bytes, and some (e.g. anki_installed_env/diff.patch) legitimately
+# contain CR bytes. Never let git rewrite them.
+*.patch -text
+
+# Binary files - never subject to line-ending conversion.
+*.ankiaddon -text
+*.dll -text
+*.exe -text
+*.jpg -text
+*.png -text
+*.ico -text

@@ -6,5 +6,6 @@
     "dark_theme": {
         "color": "#1a1a2e",
         "alpha": 25
-    }
+    },
+    "linux_frameless": false
 }

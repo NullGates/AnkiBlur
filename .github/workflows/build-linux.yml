@@ -20,6 +20,7 @@ on:
       - '.github/workflows/build-linux.yml'
       - 'patches/**'
       - 'scripts/**'
+      - 'addons/**'
       - 'packaging/**'
   pull_request:
     branches: [ main ]
@@ -27,6 +28,7 @@ on:
       - '.github/workflows/build-linux.yml'
       - 'patches/**'
       - 'scripts/**'
+      - 'addons/**'
       - 'packaging/**'
 
 # Hardcoded workflow name in the group (not ${{ github.workflow }}): inside a
@@ -91,20 +93,6 @@ jobs:
       with:
         workspaces: anki-source
         key: ${{ matrix.arch }}
-
-    - name: Setup Linux patches
-      run: |
-        # Copy Linux main.py patches to expected location
-        mkdir -p patches/0B_anki_qt_window
-        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib_main.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib64_main.patch \
-           patches/0B_anki_qt_window/
-        # Copy shared webview patches
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
-           patches/0B_anki_qt_window/
-        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
-           patches/0B_anki_qt_window/
 
     - name: Validate and Apply Patches
       shell: bash

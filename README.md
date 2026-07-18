@@ -173,9 +173,28 @@ A:
 
 ## How It Works
 
-1. **Build time**: CI applies patches to the official Anki launcher source that rebrand it as AnkiBlur (I'm not allowed to post as "Anki", although all credit goes to the ankitects!) and add the AnkiBlur install steps.
-2. **First run**: the launcher installs Anki, applies transparency patches to it (`WA_TranslucentBackground` on the main window plus transparent webview page backgrounds), and installs a background-tint addon that draws a configurable tint over the transparent canvas.
-3. **Blur**: the blur itself is drawn by your OS/compositor behind the transparent window — AnkiBlur only makes the window transparent and hints the OS to blur what's behind it.
+AnkiBlur is the official Anki launcher plus a bundled add-on — no Anki source
+files are modified on your machine:
+
+1. **Branding (build time)**: the launcher source is patched so the app
+   presents itself as "AnkiBlur" and installs alongside stock Anki (I'm not
+   allowed to post as "Anki", altough all credits goes to the ankitechts !).
+2. **Bundled add-on (runtime)**: the entire blur/transparency payload ships as
+   a regular Anki add-on (`ankiblur_background_theme`) embedded in the
+   launcher binary and installed into your `addons21/` folder. At load time it
+   uses only stable, supported Anki APIs (`gui_hooks`, `anki.hooks.wrap`,
+   direct Qt calls) to:
+   - make the main window translucent and ask the OS for native blur
+     (macOS glass, Windows acrylic, your compositor's blur rules on Linux),
+   - render the main webviews (card area, toolbars) on a transparent canvas
+     with a configurable tint overlay.
+3. **Self-check**: after startup the add-on verifies the effects actually
+   applied and shows a warning inside Anki (once per Anki version) if an
+   upstream change ever breaks them — nothing fails silently.
+
+Because nothing is text-patched at runtime, AnkiBlur keeps working across Anki
+point releases; a weekly CI probe additionally checks each new aqt release for
+the handful of symbols the add-on relies on.
 
 
 ## License

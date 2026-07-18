@@ -255,42 +255,41 @@ package_windows() {
     return 0
 }
 
-# Function to include patches directory in package info
+# Function to record the applied build-time patches in the package info.
+# The patches are applied to the launcher source at build time (they are not
+# shipped inside the package); the runtime payload is the bundled add-on.
 include_patches_info() {
     local platform="$1"
 
-    if [[ -d "$ANKI_SOURCE/patches" ]]; then
-        log_info "Creating patches manifest for $platform package"
+    log_info "Creating patches manifest for $platform package"
 
-        {
-            echo ""
-            echo "=== INCLUDED PATCHES ==="
-            echo ""
-            echo "This package includes the following AnkiBlur patches:"
-            echo ""
+    {
+        echo ""
+        echo "=== BUILD-TIME PATCHES ==="
+        echo ""
+        echo "This launcher was built from upstream Anki with the following"
+        echo "AnkiBlur build-time patches applied (see the patches/ directory"
+        echo "in the AnkiBlur repository; they are not shipped in this package):"
+        echo ""
 
-            # List all patch files with their purposes
-            echo "1. Branding Patches (patches/01_launcher_branding/):"
-            find "$ANKI_SOURCE/patches/01_launcher_branding" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
-            echo ""
+        echo "1. Branding Patches (patches/01_launcher_branding/):"
+        find "$REPO_ROOT/patches/01_launcher_branding" -maxdepth 1 -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
+        echo ""
 
-            echo "2. Core Anki Patches (patches/02_launcher_apply_anki_patches/):"
-            find "$ANKI_SOURCE/patches/02_launcher_apply_anki_patches" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
-            echo ""
+        echo "2. Core Launcher Patches (patches/02_launcher_apply_anki_patches/):"
+        find "$REPO_ROOT/patches/02_launcher_apply_anki_patches" -maxdepth 1 -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
+        echo ""
 
-            echo "3. Addon Integration Patches (patches/03_launcher_apply_anki_addon/):"
-            find "$ANKI_SOURCE/patches/03_launcher_apply_anki_addon" -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
-            echo ""
+        echo "3. Addon Embedding Patches (patches/03_launcher_apply_anki_addon/):"
+        find "$REPO_ROOT/patches/03_launcher_apply_anki_addon" -maxdepth 1 -name "*.patch" -exec basename {} \; | sort | sed 's/^/   - /'
+        echo ""
 
-            echo "The complete patches directory is included in this package"
-            echo "for reference and potential reapplication to future Anki versions."
+        echo "The blur/transparency runtime payload ships as the bundled"
+        echo "ankiblur_background_theme add-on embedded in the launcher binary."
 
-        } >> "$ARTIFACTS_DIR/anki-launcher-$VERSION-$platform.info"
+    } >> "$ARTIFACTS_DIR/anki-launcher-$VERSION-$platform.info"
 
-        log_success "Patches information added to package metadata"
-    else
-        log_warning "Patches directory not found in Anki source"
-    fi
+    log_success "Patches information added to package metadata"
 }
 
 # Function to verify package integrity

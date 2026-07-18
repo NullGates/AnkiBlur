@@ -53,16 +53,10 @@ done
 # payloads must carry the license alongside the program).
 cp "$ANKIBLUR_REPO_ROOT/LICENSE" "$ANKIBLUR_REPO_ROOT/NOTICE" "$LAUNCHER_DIR/"
 
-# Copy patches directory for runtime patching
-mkdir -p "$LAUNCHER_DIR/patches"
-
-# Copy all anki_qt_window patches
-for patch in anki_qt_window_lib_main.patch anki_qt_window_lib_webview.patch \
-             anki_qt_window_lib64_main.patch anki_qt_window_lib64_webview.patch; do
-    [ -f "../../../patches/0B_anki_qt_window/$patch" ] && \
-        cp "../../../patches/0B_anki_qt_window/$patch" "$LAUNCHER_DIR/patches/" || \
-        echo "Warning: $patch not found"
-done
+# No runtime patch staging: the blur payload ships as an Anki addon embedded
+# in the launcher binary (include_bytes! in addon.rs), staged into
+# qt/launcher/addon/ by scripts/validate-and-apply-patches.sh before the
+# cargo build above.
 
 # Set executable permissions
 chmod +x "$LAUNCHER_DIR/launcher.$ARCH_SUFFIX" "$LAUNCHER_DIR/uv.$ARCH_SUFFIX" "$LAUNCHER_DIR/anki" || true

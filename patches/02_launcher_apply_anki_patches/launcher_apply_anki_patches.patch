@@ -1,38 +1,196 @@
-diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/Cargo.toml v1_edit/qt/launcher/Cargo.toml
---- original/qt/launcher/Cargo.toml	2025-11-16 20:09:05.984661252 +0100
-+++ v1_edit/qt/launcher/Cargo.toml	2025-11-16 20:09:48.237641983 +0100
-@@ -14,6 +14,7 @@
- camino.workspace = true
- dirs.workspace = true
- serde_json.workspace = true
-+diffy = "0.4"
- 
- [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
- libc.workspace = true
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/cleanup.rs v1_edit/qt/launcher/src/cleanup.rs
+--- original/qt/launcher/src/cleanup.rs	1970-01-01 01:00:00.000000000 +0100
++++ v1_edit/qt/launcher/src/cleanup.rs	2026-07-18 00:07:26.985965670 +0200
+@@ -0,0 +1,165 @@
++// AnkiBlur: one-time repair of venvs that were modified in place by the old
++// (pre-addon) site-packages text-patching scheme. Old launcher versions
++// edited aqt/main.py and aqt/webview.py inside the venv and left `.backup`
++// files beside them; the blur now lives entirely in the bundled add-on, so
++// returning users get their pristine aqt back here.
++
++use std::path::Path;
++use std::path::PathBuf;
++
++use anki_io::read_file;
++use anki_io::remove_file;
++use anki_io::write_file;
++use anki_process::CommandExt;
++use anyhow::Context;
++use anyhow::Result;
++
++/// Strings that only ever appear in files modified by the old AnkiBlur
++/// patching scheme; verified absent from pristine aqt releases.
++const MARKERS: &[&str] = &[
++    "_ankiblur_",
++    "AnkiBlur",
++    "setWindowOpacity(0.0)",
++    "Set transparent background for full transparency",
++];
++
++/// Infallible wrapper: cleanup must never block the launch.
++pub fn cleanup_legacy_patches(state: &crate::State) {
++    if let Err(e) = cleanup_inner(state) {
++        println!("Warning: AnkiBlur legacy patch cleanup failed (will retry next launch): {e:#}");
++    }
++}
++
++fn cleanup_inner(state: &crate::State) -> Result<()> {
++    let marker = state.uv_install_root.join(".ankiblur-cleanup-v1");
++    if marker.exists() {
++        return Ok(());
++    }
++    if !state.venv_folder.exists() {
++        // Nothing to repair on fresh installs.
++        write_file(&marker, "")?;
++        return Ok(());
++    }
++
++    let mut needs_reinstall = false;
++    for aqt_dir in aqt_site_dirs(state) {
++        needs_reinstall |= clean_aqt_dir(&aqt_dir)?;
++    }
++
++    if needs_reinstall {
++        crate::platform::ensure_terminal_shown()?;
++        println!(
++            "AnkiBlur: restoring pristine Anki files modified by an older AnkiBlur version..."
++        );
++        // A plain `uv sync` compares metadata, not file contents, and would
++        // leave the patched files in place - force the aqt reinstall.
++        let mut command = crate::uv_command(state)?;
++        command
++            .env("UV_CACHE_DIR", &state.uv_cache_dir)
++            .env("UV_PYTHON_INSTALL_DIR", &state.uv_python_install_dir)
++            .env(
++                "UV_HTTP_TIMEOUT",
++                std::env::var("UV_HTTP_TIMEOUT").unwrap_or_else(|_| "180".to_string()),
++            );
++        command.args(["sync", "--reinstall-package", "aqt", "--no-config"]);
++        if !state.system_qt {
++            command.arg("--managed-python");
++        }
++        if state.no_cache_marker.exists() {
++            command.env("UV_NO_CACHE", "1");
++        }
++        command.ensure_success()?;
++        println!("AnkiBlur: pristine Anki files restored.");
++    }
++
++    // Only mark complete on full success; an offline/uv failure above
++    // returns early and we retry on the next launch.
++    write_file(&marker, "")?;
++    Ok(())
++}
++
++/// All plausible site-packages/aqt dirs inside the venv, resolved
++/// dynamically (no hardcoded python version) and deduped via canonicalize
++/// (lib64 is typically a symlink to lib).
++fn aqt_site_dirs(state: &crate::State) -> Vec<PathBuf> {
++    let venv = &state.venv_folder;
++    // Windows layout.
++    let mut candidates: Vec<PathBuf> = vec![venv.join("Lib").join("site-packages")];
++    // Unix layouts: lib{,64}/python3.*/site-packages
++    for lib_name in ["lib", "lib64"] {
++        if let Ok(entries) = std::fs::read_dir(venv.join(lib_name)) {
++            for entry in entries.flatten() {
++                if entry
++                    .file_name()
++                    .to_string_lossy()
++                    .starts_with("python3")
++                {
++                    candidates.push(entry.path().join("site-packages"));
++                }
++            }
++        }
++    }
++
++    let mut seen = std::collections::HashSet::new();
++    let mut result = Vec::new();
++    for candidate in candidates {
++        let aqt_dir = candidate.join("aqt");
++        if !aqt_dir.is_dir() {
++            continue;
++        }
++        let canonical = std::fs::canonicalize(&aqt_dir).unwrap_or_else(|_| aqt_dir.clone());
++        if seen.insert(canonical) {
++            result.push(aqt_dir);
++        }
++    }
++    result
++}
++
++/// Handle `.backup` files and residual contamination in one aqt/ dir.
++/// Returns true when an aqt reinstall is required.
++fn clean_aqt_dir(aqt_dir: &Path) -> Result<bool> {
++    let mut needs_reinstall = false;
++
++    let entries = std::fs::read_dir(aqt_dir)
++        .with_context(|| format!("reading {}", aqt_dir.display()))?;
++    for entry in entries.flatten() {
++        let name = entry.file_name().to_string_lossy().to_string();
++        if !name.ends_with(".backup") {
++            continue;
++        }
++        let backup_path = entry.path();
++        let content = read_file(&backup_path)?;
++        if is_contaminated(&content) {
++            // The old patcher sometimes re-backed-up an already-patched file
++            // (double application through the lib64 symlink, or later
++            // re-syncs), so the backup itself is patched and restoring it
++            // would re-install the modifications. Discard it and reinstall.
++            println!(
++                "AnkiBlur cleanup: discarding contaminated backup {}",
++                backup_path.display()
++            );
++            needs_reinstall = true;
++        } else {
++            let target = aqt_dir.join(name.trim_end_matches(".backup"));
++            println!("AnkiBlur cleanup: restoring {}", target.display());
++            write_file(&target, &content)?;
++        }
++        remove_file(&backup_path)?;
++    }
++
++    // Files can also be contaminated without a usable backup.
++    for name in ["main.py", "webview.py"] {
++        if let Ok(content) = read_file(aqt_dir.join(name)) {
++            if is_contaminated(&content) {
++                needs_reinstall = true;
++            }
++        }
++    }
++
++    Ok(needs_reinstall)
++}
++
++fn is_contaminated(content: &[u8]) -> bool {
++    let text = String::from_utf8_lossy(content);
++    MARKERS.iter().any(|marker| text.contains(marker))
++}
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/main.rs v1_edit/qt/launcher/src/main.rs
---- original/qt/launcher/src/main.rs	2025-11-16 20:09:05.986107404 +0100
-+++ v1_edit/qt/launcher/src/main.rs	2026-01-30 01:12:35.234213171 +0100
-@@ -29,6 +29,7 @@
+--- original/qt/launcher/src/main.rs	2026-07-18 00:07:03.384898103 +0200
++++ v1_edit/qt/launcher/src/main.rs	2026-07-18 00:07:56.659652279 +0200
+@@ -28,6 +28,7 @@
+ use crate::platform::launch_anki_normally;
  use crate::platform::respawn_launcher;
  
++mod cleanup;
  mod platform;
-+mod patch;
  
  struct State {
-     current_version: Option<String>,
-@@ -349,6 +350,12 @@
-                 }
-             }
+@@ -135,6 +136,12 @@
+     // Create install directory
+     create_dir_all(&state.uv_install_root)?;
  
-+            // Apply custom patches after successful installation
-+            if let Err(e) = patch::apply_patches(&state.venv_folder) {
-+                println!("Warning: Failed to apply patches: {e:#}");
-+                println!("Anki will continue without patches.");
-+            }
++    // AnkiBlur: one-time repair of venvs modified by the old (pre-addon)
++    // site-packages patching scheme. Runs before the fast-path launch check
++    // so every returning user is repaired exactly once, whether or not they
++    // ever re-sync. No-op once the marker is written.
++    cleanup::cleanup_legacy_patches(&state);
 +
-             Ok(())
-         }
-         Err(e) => {
+     let launcher_requested =
+         state.launcher_trigger_file.exists() || !state.user_pyproject_path.exists();
+ 
 @@ -738,7 +745,12 @@
                          "  \"pyqt6-qt6==6.6.2\",\n",
                          "  \"pyqt6-webengine==6.6.0\",\n",
@@ -68,175 +226,3 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/
          ),
      };
  
-diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' original/qt/launcher/src/patch.rs v1_edit/qt/launcher/src/patch.rs
---- original/qt/launcher/src/patch.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v1_edit/qt/launcher/src/patch.rs	2025-11-18 20:53:59.887737519 +0100
-@@ -0,0 +0,167 @@
-+use std::path::{Path, PathBuf};
-+use anki_io::{read_file, write_file, copy_file};
-+use anyhow::{Context, Result};
-+use diffy::{Patch, apply};
-+
-+/// Apply patches to the installed Anki files
-+pub fn apply_patches(venv_folder: &Path) -> Result<()> {
-+    println!("Applying custom patches...");
-+
-+    let patches_dir = get_patches_directory()?;
-+    if !patches_dir.exists() {
-+        println!("No patches directory found, skipping patch application.");
-+        return Ok(());
-+    }
-+
-+    // List of patches to apply in order
-+    let patch_files = [
-+        "anki_qt_window_lib_main.patch",
-+        "anki_qt_window_lib_webview.patch",
-+        "anki_qt_window_lib64_main.patch",
-+        "anki_qt_window_lib64_webview.patch",
-+        "anki_branding.patch",
-+    ];
-+
-+    for patch_file in &patch_files {
-+        let patch_path = patches_dir.join(patch_file);
-+        if patch_path.exists() {
-+            println!("Applying patch: {}", patch_file);
-+            apply_single_patch(&patch_path, venv_folder)
-+                .with_context(|| format!("Failed to apply patch: {}", patch_file))?;
-+        } else {
-+            println!("Patch not found, skipping: {}", patch_file);
-+        }
-+    }
-+
-+    println!("Patch application completed successfully.");
-+    Ok(())
-+}
-+
-+/// Get the patches directory relative to the launcher binary
-+fn get_patches_directory() -> Result<PathBuf> {
-+    let exe_path = std::env::current_exe()
-+        .context("Failed to get current executable path")?;
-+    let exe_dir = exe_path.parent()
-+        .context("Failed to get executable directory")?;
-+    // Windows/Linux ship patches next to the launcher binary.
-+    let local = exe_dir.join("patches");
-+    if local.exists() {
-+        return Ok(local);
-+    }
-+    // macOS .app bundle: launcher lives in Contents/MacOS, but data must
-+    // sit under Contents/Resources so codesign can seal it (a data dir in
-+    // Contents/MacOS breaks bundle signing). Fall back there.
-+    Ok(exe_dir.join("../Resources/patches"))
-+}
-+
-+/// Apply a single patch file to the venv
-+fn apply_single_patch(patch_path: &Path, venv_folder: &Path) -> Result<()> {
-+    // Read the patch file
-+    let patch_content = read_file(patch_path)?;
-+    let patch_str = String::from_utf8(patch_content)
-+        .context("Patch file contains invalid UTF-8")?;
-+
-+    // Note: diffy parses patches as single-file patches
-+    // For multi-file patches, we'd need to split them first
-+    // Currently our patches (anki_qt_window.patch, anki_branding.patch) are single-file
-+
-+    // Parse the patch using diffy
-+    let patch = Patch::from_str(&patch_str)
-+        .context("Failed to parse patch file")?;
-+
-+    // Get the target file path from the patch
-+    // diffy uses the +++ line (modified) if present, otherwise --- line (original)
-+    let target_path = patch.modified()
-+        .or_else(|| patch.original())
-+        .context("Patch doesn't specify a file path")?;
-+
-+    // Apply our -p1 path stripping and resolve to venv path
-+    let file_path = resolve_patch_path(target_path, venv_folder)?;
-+
-+    if !file_path.exists() {
-+        println!("Warning: Target file does not exist, skipping: {}", file_path.display());
-+        return Ok(());
-+    }
-+
-+    // Create backup before applying patch
-+    let backup_path = create_backup(&file_path)?;
-+
-+    // Read the original file
-+    let original_content = read_file(&file_path)?;
-+    let original_str = String::from_utf8(original_content)
-+        .context("Original file contains invalid UTF-8")?;
-+
-+    // Apply the patch using diffy's apply function
-+    match apply(&original_str, &patch) {
-+        Ok(patched_content) => {
-+            // Write the patched content
-+            write_file(&file_path, &patched_content)?;
-+            println!("Successfully patched: {}", file_path.display());
-+        }
-+        Err(e) => {
-+            // Restore backup on failure
-+            copy_file(&backup_path, &file_path)?;
-+            println!("Failed to apply patch to {}: {}", file_path.display(), e);
-+            println!("Original file restored from backup.");
-+        }
-+    }
-+
-+    Ok(())
-+}
-+
-+
-+/// Resolve patch file path to actual file system path
-+fn resolve_patch_path(patch_path: &str, venv_folder: &Path) -> Result<PathBuf> {
-+    // Implement -p1: strip first directory component (generic path stripping)
-+    let clean_path = if let Some(slash_pos) = patch_path.find('/') {
-+        &patch_path[slash_pos + 1..]  // Take everything after first /
-+    } else {
-+        patch_path  // No slash found, use as-is
-+    };
-+
-+    // Strip .venv/ prefix if present (since venv_folder already contains it)
-+    let clean_path = clean_path.strip_prefix(".venv/").unwrap_or(clean_path);
-+
-+    // Build the full path relative to venv
-+    let full_path = venv_folder.join(clean_path);
-+
-+    Ok(full_path)
-+}
-+
-+/// Create a backup of the file before patching
-+fn create_backup(file_path: &Path) -> Result<PathBuf> {
-+    let backup_path = file_path.with_extension(
-+        format!("{}.backup",
-+                file_path.extension()
-+                    .and_then(|s| s.to_str())
-+                    .unwrap_or(""))
-+    );
-+
-+    copy_file(file_path, &backup_path)?;
-+    Ok(backup_path)
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+
-+    #[test]
-+    fn test_resolve_patch_path() {
-+        let venv = PathBuf::from("/tmp/venv");
-+
-+        assert_eq!(
-+            resolve_patch_path("a/src/main.py", &venv).unwrap(),
-+            PathBuf::from("/tmp/venv/src/main.py")
-+        );
-+
-+        assert_eq!(
-+            resolve_patch_path("b/lib/aqt/__init__.py", &venv).unwrap(),
-+            PathBuf::from("/tmp/venv/lib/aqt/__init__.py")
-+        );
-+
-+        assert_eq!(
-+            resolve_patch_path("src/main.py", &venv).unwrap(),
-+            PathBuf::from("/tmp/venv/src/main.py")
-+        );
-+    }
-+}
-\ No newline at end of file
