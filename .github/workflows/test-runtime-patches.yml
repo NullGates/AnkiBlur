@@ -1,0 +1,159 @@
+# Validates that the 0B_LINUX/0C runtime patches apply cleanly to a real
+# uv-installed aqt (H6). Until the addon-native redesign lands, these diffs
+# only ever meet real site-packages on end-user machines, inside a
+# failure-swallowing runtime path -- this job is the loud CI tripwire.
+# When the 0B/0C patch dirs are archived by the redesign, delete this file
+# with them.
+#
+# Note on semantics: GNU patch --fuzz=0 approximates the launcher's diffy
+# apply; diffy is still slightly stricter (no offset tolerance). Exact-
+# semantics testing arrives with the redesign, which deletes this mechanism.
+name: Test runtime patches against real aqt
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/test-runtime-patches.yml'
+      - 'patches/0B_LINUX_anki_qt_window_main/**'
+      - 'patches/0C_anki_qt_window_webview/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/test-runtime-patches.yml'
+      - 'patches/0B_LINUX_anki_qt_window_main/**'
+      - 'patches/0C_anki_qt_window_webview/**'
+  schedule:
+    - cron: '17 6 * * 1'   # weekly: catch upstream aqt drift
+
+concurrency:
+  group: test-runtime-patches-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: '0.11.29'
+  AQT_VERSION: '25.9.2'    # ground-truth version the 0B/0C diffs were generated against
+
+jobs:
+  # Pinned aqt: must always pass; gates releases (release.yml `needs` this).
+  apply-pinned:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pinned uv
+        run: |
+          set -euo pipefail
+          curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz --strip-components=1
+          ./uv --version
+
+      - name: Create venv and install aqt (pinned)
+        run: |
+          set -euo pipefail
+          ./uv venv --python 3.13 .venv
+          # H2 made loud: the patch headers hardcode lib/python3.13. If the
+          # venv layout ever differs, the launcher would silently skip every
+          # patch on user machines -- fail here instead.
+          test -d .venv/lib/python3.13/site-packages \
+            || { echo "::error::patch headers hardcode lib/python3.13 -- venv layout mismatch"; exit 1; }
+          # aqt is a pure wheel and the patches only touch aqt/main.py and
+          # aqt/webview.py; --no-deps skips PyQt6 and keeps this under a minute.
+          ./uv pip install --python .venv/bin/python --no-deps "aqt==${AQT_VERSION}"
+
+      - name: Check lib64 patch variants are in sync (L6)
+        run: |
+          set -euo pipefail
+          for d in patches/0B_LINUX_anki_qt_window_main patches/0C_anki_qt_window_webview; do
+            for p64 in "$d"/*_lib64_*.patch; do
+              if ! diff <(sed 's#/lib64/#/lib/#g' "$p64") "${p64/lib64/lib}"; then
+                echo "::error::$p64 differs from its lib variant beyond the /lib64/ headers"
+                exit 1
+              fi
+              echo "in sync: $p64"
+            done
+          done
+
+      - name: Apply runtime patches strictly
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          patches=(patches/0B_LINUX_anki_qt_window_main/*_lib_*.patch patches/0C_anki_qt_window_webview/*_lib_*.patch)
+          [ ${#patches[@]} -ge 2 ] || { echo "::error::expected Linux runtime patches, found ${#patches[@]}"; exit 1; }
+          for p in "${patches[@]}"; do
+            echo "== dry-run $p"
+            patch --dry-run --batch --fuzz=0 -p1 -d . < "$p"   # headers are v1/.venv/... -> -p1 strips v1/
+            echo "== apply $p"
+            patch --batch --fuzz=0 -p1 -d . < "$p"
+          done
+
+      - name: Verify injected markers and syntax
+        run: |
+          set -euo pipefail
+          grep -q "WA_TranslucentBackground" .venv/lib/python3.13/site-packages/aqt/main.py
+          grep -q "setBackgroundColor(QColor(0, 0, 0, 0))" .venv/lib/python3.13/site-packages/aqt/webview.py
+          grep -q "background-color: transparent" .venv/lib/python3.13/site-packages/aqt/webview.py
+          .venv/bin/python -m py_compile \
+            .venv/lib/python3.13/site-packages/aqt/main.py \
+            .venv/lib/python3.13/site-packages/aqt/webview.py
+          echo "all markers present; patched files compile"
+
+  # Latest aqt: only on schedule/dispatch. Failure here is the desired loud
+  # signal that upstream drifted (H2's silent-failure class, surfaced in CI
+  # instead of on user machines). Deliberately a separate job so a new
+  # upstream release can never block releasing the pinned version.
+  # The github.workflow check skips this job when the file is invoked via
+  # workflow_call (inside a callee that expression resolves to the CALLER's
+  # workflow name), so a workflow_dispatch of release.yml is gated only on
+  # apply-pinned.
+  apply-latest:
+    if: >-
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      && github.workflow == 'Test runtime patches against real aqt'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pinned uv
+        run: |
+          set -euo pipefail
+          curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz --strip-components=1
+          ./uv --version
+
+      - name: Create venv and install aqt (latest)
+        run: |
+          set -euo pipefail
+          ./uv venv --python 3.13 .venv
+          test -d .venv/lib/python3.13/site-packages \
+            || { echo "::error::patch headers hardcode lib/python3.13 -- venv layout mismatch"; exit 1; }
+          ./uv pip install --python .venv/bin/python --no-deps aqt
+          ./uv pip list --python .venv/bin/python | grep -i aqt
+
+      - name: Apply runtime patches strictly
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          patches=(patches/0B_LINUX_anki_qt_window_main/*_lib_*.patch patches/0C_anki_qt_window_webview/*_lib_*.patch)
+          [ ${#patches[@]} -ge 2 ] || { echo "::error::expected Linux runtime patches, found ${#patches[@]}"; exit 1; }
+          for p in "${patches[@]}"; do
+            echo "== dry-run $p"
+            patch --dry-run --batch --fuzz=0 -p1 -d . < "$p"
+            echo "== apply $p"
+            patch --batch --fuzz=0 -p1 -d . < "$p"
+          done
+
+      - name: Verify injected markers and syntax
+        run: |
+          set -euo pipefail
+          grep -q "WA_TranslucentBackground" .venv/lib/python3.13/site-packages/aqt/main.py
+          grep -q "setBackgroundColor(QColor(0, 0, 0, 0))" .venv/lib/python3.13/site-packages/aqt/webview.py
+          grep -q "background-color: transparent" .venv/lib/python3.13/site-packages/aqt/webview.py
+          .venv/bin/python -m py_compile \
+            .venv/lib/python3.13/site-packages/aqt/main.py \
+            .venv/lib/python3.13/site-packages/aqt/webview.py
+          echo "all markers present; patched files compile"

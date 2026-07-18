@@ -1,0 +1,194 @@
+name: Build Linux Launchers
+
+on:
+  workflow_dispatch:
+    inputs:
+      anki_version:
+        description: 'Anki version to build (e.g., 25.09)'
+        required: true
+        default: '25.09'
+        type: string
+  workflow_call:
+    inputs:
+      anki_version:
+        required: false
+        type: string
+        default: '25.09'
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-linux.yml'
+      - 'patches/**'
+      - 'scripts/**'
+      - 'packaging/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-linux.yml'
+      - 'patches/**'
+      - 'scripts/**'
+      - 'packaging/**'
+
+# Hardcoded workflow name in the group (not ${{ github.workflow }}): inside a
+# workflow_call callee that expression resolves to the CALLER's name, so all
+# builds invoked by release.yml would share one group and cancel each other.
+concurrency:
+  group: build-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ANKI_VERSION: ${{ inputs.anki_version || '25.09' }}
+  # Pinned: releases/latest already broke the Windows workflow once (archive
+  # layout drift). Keep in sync with build-windows.yml / build-macos.yml.
+  UV_VERSION: '0.11.29'
+
+jobs:
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-22.04
+            rust_target: x86_64-unknown-linux-gnu
+            arch_suffix: amd64
+            uv_target: x86_64-unknown-linux-gnu
+            artifact_arch: x86_64
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+            rust_target: aarch64-unknown-linux-gnu
+            arch_suffix: arm64
+            uv_target: aarch64-unknown-linux-gnu
+            artifact_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout AnkiBlur Repository
+      uses: actions/checkout@v5
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.rust_target }}
+
+    - name: Install Linux Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libssl-dev \
+          pkg-config \
+          zstd \
+          tar \
+          patch
+
+    - name: Download Anki Source
+      run: |
+        git clone --branch ${{ env.ANKI_VERSION }} --depth 1 https://github.com/ankitects/anki.git anki-source
+
+    - name: Cache Rust build
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: anki-source
+        key: ${{ matrix.arch }}
+
+    - name: Setup Linux patches
+      run: |
+        # Copy Linux main.py patches to expected location
+        mkdir -p patches/0B_anki_qt_window
+        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib_main.patch \
+           patches/0B_anki_qt_window/
+        cp patches/0B_LINUX_anki_qt_window_main/anki_qt_window_lib64_main.patch \
+           patches/0B_anki_qt_window/
+        # Copy shared webview patches
+        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib_webview.patch \
+           patches/0B_anki_qt_window/
+        cp patches/0C_anki_qt_window_webview/anki_qt_window_lib64_webview.patch \
+           patches/0B_anki_qt_window/
+
+    - name: Validate and Apply Patches
+      shell: bash
+      run: |
+        chmod +x scripts/validate-and-apply-patches.sh
+        ./scripts/validate-and-apply-patches.sh anki-source
+
+    - name: Setup Build Environment
+      shell: bash
+      working-directory: anki-source
+      run: |
+        # Create version file
+        echo "${{ env.ANKI_VERSION }}" > .version
+
+    - name: Extract UV binaries
+      working-directory: anki-source
+      run: |
+        set -euo pipefail
+        mkdir -p out/extracted/uv
+        curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${{ matrix.uv_target }}.tar.gz" -o uv.tar.gz
+        tar -xzf uv.tar.gz --strip-components=1 -C out/extracted/uv
+        test -x out/extracted/uv/uv || { echo "uv missing after extract"; exit 1; }
+
+    - name: Install AnkiBlur Build Script
+      shell: bash
+      run: |
+        # Replace upstream's dual-arch build.sh with our native-only script
+        cp scripts/build-launcher-linux.sh anki-source/qt/launcher/lin/build.sh
+        chmod +x anki-source/qt/launcher/lin/build.sh
+
+    - name: Build Launcher
+      shell: bash
+      working-directory: anki-source
+      env:
+        RUST_TARGET: ${{ matrix.rust_target }}
+        ARCH_SUFFIX: ${{ matrix.arch_suffix }}
+        ANKIBLUR_REPO_ROOT: ${{ github.workspace }}
+      run: |
+        echo "Building Linux ${{ matrix.arch }} launcher..."
+        cd qt/launcher/lin
+        ./build.sh
+
+    - name: Package Artifacts
+      shell: bash
+      run: |
+        mkdir -p artifacts
+        cp anki-source/out/launcher/anki-launcher-${{ env.ANKI_VERSION }}-linux-${{ matrix.arch_suffix }}.tar.zst \
+           "artifacts/anki-launcher-${{ env.ANKI_VERSION }}-linux-${{ matrix.artifact_arch }}.tar.zst"
+        cp LICENSE NOTICE artifacts/
+
+    - name: Generate Checksums
+      shell: bash
+      run: |
+        cd artifacts
+        sha256sum "anki-launcher-${ANKI_VERSION}-linux-${{ matrix.artifact_arch }}.tar.zst" \
+          > "anki-launcher-${ANKI_VERSION}-linux-${{ matrix.artifact_arch }}.tar.zst.sha256"
+
+    - name: Install Linux packaging tools
+      run: |
+        sudo apt-get update
+        # dpkg-deb ships with the runner; rpm provides rpmbuild; file is used by
+        # rpm's dependency generator; desktop-file-utils provides the
+        # desktop-file-validate that appimagetool requires. appimagetool itself
+        # is fetched by the script.
+        sudo apt-get install -y rpm file desktop-file-utils
+
+    - name: Build distro packages (.deb / .rpm / .AppImage)
+      shell: bash
+      env:
+        ANKIBLUR_REQUIRE_ALL: '1'
+      run: |
+        chmod +x scripts/package-linux.sh
+        ./scripts/package-linux.sh \
+          --launcher-dir "anki-source/out/launcher/anki-launcher-${ANKI_VERSION}-linux-${{ matrix.arch_suffix }}" \
+          --arch "${{ matrix.arch_suffix }}" \
+          --version "${ANKI_VERSION}" \
+          --outdir artifacts
+
+    - name: Upload Artifacts
+      # Upload whatever made it into artifacts/ even if packaging failed, so a
+      # transient appimagetool fetch can't drop the already-built tarball/.deb/.rpm.
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v5
+      with:
+        name: ankiblur-launcher-linux-${{ matrix.arch }}
+        path: artifacts/
+        retention-days: 30
