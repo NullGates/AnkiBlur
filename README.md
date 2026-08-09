@@ -20,7 +20,7 @@
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-download-dark.svg">
-    <img src="./docs/icon-download-light.svg" height="48" align="center" alt="">
+    <img src="./docs/icon-download-light.svg" height="32" align="center" alt="">
   </picture>
   Download
 </h2>
@@ -40,7 +40,7 @@
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-hash-dark.svg">
-    <img src="./docs/icon-hash-light.svg" height="48" align="center" alt="">
+    <img src="./docs/icon-hash-light.svg" height="32" align="center" alt="">
   </picture>
   Installation
 </h2>
@@ -48,7 +48,7 @@
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-help-circle-dark.svg">
-    <img src="./docs/icon-help-circle-light.svg" height="48" align="center" alt="">
+    <img src="./docs/icon-help-circle-light.svg" height="32" align="center" alt="">
   </picture>
   FAQ
 </h2>
@@ -125,7 +125,7 @@ A:
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-layers-dark.svg">
-    <img src="./docs/icon-layers-light.svg" height="48" align="center" alt="">
+    <img src="./docs/icon-layers-light.svg" height="32" align="center" alt="">
   </picture>
   How It Works
 </h2>
