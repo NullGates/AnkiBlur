@@ -1,16 +1,35 @@
 <p align="center">
-  <img src="screenshot.png" alt="AnkiBlur screenshot showing window blur effect" width="100%">
+  <img src="./docs/screenshots.png" alt="AnkiBlur screenshot showing window blur effect" width="100%">
 </p>
 
-This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top to achieve a window blur effect. Builds are currently pinned to Anki 25.09; new Anki releases require a manual version bump.
+<p align="center">
+  This repo takes the official <a href="https://github.com/ankitects/anki">Anki</a> app and applies custom patches on top to achieve a window blur effect.
+</p>
 
-## Downloads
+<p align="center">
+  <a href="#download">Download</a>
+  ·
+  <a href="#installation">Installation</a>
+  ·
+  <a href="#faq">FAQ</a>
+  ·
+  <a href="#how-it-works">How It Works</a>
+</p>
+
+
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-download-dark.svg">
+    <img src="./docs/icon-download-light.svg" height="24" align="center" alt="">
+  </picture>
+  Download
+</h2>
 
 | Platform | Supported Architecture | Download Latest | Blur Support |
-|---|---|---|---|
-| <img width="150" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" />| ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Requires a compositor implementing blur  |
-|  <img width="150" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /> | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon](https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)| Native blur support |
-| <img width="400" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| [![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Native blur support (Windows 8+) |
+|:---|:---|:---|---|
+|  <img width="150" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /> | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon](https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)| Native blur support (macOS 10.15+) |
+| <img width="200" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) <br>![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| [![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Native blur support (Windows 10 1803+)<br>Installer is unsigned — SmartScreen will warn |
+| <img width="150" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" /> | ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) [![download_deb](https://custom-icon-badges.demolab.com/badge/Download%20-.deb-blue?style=for-the-badge&logoSource=simple-icons&logo=debian&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)<br> [![download_rpm](https://custom-icon-badges.demolab.com/badge/Download%20-.rpm-blue?style=for-the-badge&logoSource=simple-icons&logo=fedora&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) [![download_tarzst](https://custom-icon-badges.demolab.com/badge/Download%20-.tar.zst-blue?style=for-the-badge&logoSource=feather&logo=package&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)<br> [![nixos_flake](https://custom-icon-badges.demolab.com/badge/I'm%20working%20on%20it...%20-flake-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur)<br> [![nixos_stable](https://custom-icon-badges.demolab.com/badge/also%20working%20on%20it%20%3A3%20-Nix%20stable%20pkgs-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur) | Requires a compositor implementing blur<br>Needs glibc 2.36 or newer |
 
 
 [comment]: <> (<img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">) 
@@ -18,87 +37,21 @@ This repo takes the official [Anki](https://github.com/ankitects/anki) and appli
 
 
 
-## Installation
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-hash-dark.svg">
+    <img src="./docs/icon-hash-light.svg" height="24" align="center" alt="">
+  </picture>
+  Installation
+</h2>
 
-### Linux
-
-Every push builds three package formats per architecture (`x86_64` and `aarch64`)
-in CI: a portable **AppImage**, a **.deb** (Debian/Ubuntu/Mint/Pop!_OS) and a
-**.rpm** (Fedora/RHEL/openSUSE). Pick whichever fits your distro. They are
-installed as `ankiblur`, so they sit side by side with a stock Anki.
-
-> On first launch the launcher downloads the Python/Qt runtime into
-> `~/.local/share/AnkiBlurProgramFiles/`, so the first start needs an internet
-> connection and takes a little longer.
-
-#### Option 1: AppImage (Recommended — works on any distro)
-```bash
-# Download the AppImage for your architecture, then:
-chmod +x AnkiBlur-*-x86_64.AppImage
-./AnkiBlur-*-x86_64.AppImage
-
-# Optional: integrate with the system menu
-./AnkiBlur-*-x86_64.AppImage --appimage-extract
-sudo mv squashfs-root /opt/ankiblur
-sudo ln -s /opt/ankiblur/AppRun /usr/local/bin/ankiblur
-```
-
-#### Option 2: Debian / Ubuntu (.deb)
-```bash
-sudo apt install ./ankiblur_*_amd64.deb     # arm64: ankiblur_*_arm64.deb
-# or:  sudo dpkg -i ankiblur_*_amd64.deb && sudo apt install -f
-```
-
-#### Option 3: Fedora / openSUSE (.rpm)
-```bash
-sudo dnf install ./ankiblur-*.x86_64.rpm     # aarch64: ankiblur-*.aarch64.rpm
-# openSUSE:  sudo zypper install ./ankiblur-*.x86_64.rpm
-```
-
-#### Option 4: Raw launcher tarball (other distros / Nix / manual)
-```bash
-# The architecture-specific .tar.zst is the plain Anki launcher payload.
-tar --use-compress-program=unzstd -xf anki-launcher-<version>-linux-x86_64.tar.zst
-cd anki-launcher-* && sudo ./install.sh   # or just ./anki to run in place
-```
-
-> **Flatpak** is not yet available: the launcher downloads its runtime at first
-> start, which does not fit Flathub's offline-build model. A fully self-contained
-> Flatpak is tracked as future work.
-
-### macOS
-
-#### Download and Install
-Download `anki-launcher-<version>-mac.dmg` from the [releases page](https://github.com/NullGates/AnkiBlur/releases/latest), then:
-```bash
-# Mount and install
-open anki-launcher-<version>-mac.dmg
-# Drag the app to your Applications folder
-```
-
-#### Command Line (Homebrew - coming soon)
-```bash
-brew install --cask ankiblur
-```
-
-### Windows
-
-#### Option 1: Installer (Recommended)
-1. Download `anki-launcher-<version>-windows.exe` from [releases](https://github.com/NullGates/AnkiBlur/releases/latest)
-2. Run the installer (no administrator rights needed; it installs to your user profile)
-3. Follow installation wizard
-4. Launch from Start Menu or Desktop shortcut
-
-#### Option 2: Package Managers
-```powershell
-# Chocolatey (coming soon)
-choco install ankiblur
-
-# Winget (coming soon)
-winget install AnkiBlur
-```
-
-## FAQ
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-help-circle-dark.svg">
+    <img src="./docs/icon-help-circle-light.svg" height="24" align="center" alt="">
+  </picture>
+  FAQ
+</h2>
 
 ### General Questions
 
@@ -169,7 +122,13 @@ A:
 - **Launcher runtime**: delete `~/.local/share/AnkiBlurProgramFiles/` (Linux; equivalent data dir on other platforms)
 - **User data**: lives in the shared `~/.local/share/Anki2/` — do NOT delete it if you also use stock Anki, it holds your cards and profiles for both
 
-## How It Works
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-layers-dark.svg">
+    <img src="./docs/icon-layers-light.svg" height="24" align="center" alt="">
+  </picture>
+  How It Works
+</h2>
 
 AnkiBlur is the official Anki launcher plus a bundled add-on — no Anki source
 files are modified on your machine:
@@ -194,7 +153,6 @@ Because nothing is text-patched at runtime, AnkiBlur keeps working across Anki
 point releases; a weekly CI probe additionally checks each new aqt release for
 the handful of symbols the add-on relies on.
 
-
-## License
-
-AnkiBlur is licensed under the GNU AGPL-3.0-or-later, the same license as Anki. The full license text is in [LICENSE](LICENSE); upstream attribution and third-party notices are in [NOTICE](NOTICE). Binary installers convey this program under the same license; each release ships the license text alongside the artifacts.
+<p align="center">
+  Licensed under AGPL-3.0-or-later — see <a href="LICENSE">LICENSE</a> and <a href="NOTICE">NOTICE</a>.
+</p>
