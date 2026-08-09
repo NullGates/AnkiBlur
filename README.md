@@ -17,6 +17,7 @@
 </p>
 
 
+<a id="download"></a>
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-download-dark.svg">
@@ -62,6 +63,7 @@
 
 
 
+<a id="installation"></a>
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-hash-dark.svg">
@@ -74,7 +76,7 @@ Every method ships only the launcher. On first run it downloads Anki and the Qt
 runtime into `AnkiBlurProgramFiles`, so the first launch needs a network connection.
 
 <details>
-<summary><h3>macOS</h3></summary>
+<summary><big><b>macOS</b></big></summary>
 
 <br>
 
@@ -92,7 +94,7 @@ Requires macOS 10.15 or newer. To uninstall, drag the app to the Trash.
 </details>
 
 <details>
-<summary><h3>Windows</h3></summary>
+<summary><big><b>Windows</b></big></summary>
 
 <br>
 
@@ -110,7 +112,7 @@ Requires Windows 10 1803 or newer for the blur effect. To uninstall, use
 </details>
 
 <details>
-<summary><h3>Linux</h3></summary>
+<summary><big><b>Linux</b></big></summary>
 
 <br>
 
@@ -146,6 +148,7 @@ compositor that implements blur. To uninstall: `sudo apt remove ankiblur`,
 
 </details>
 
+<a id="faq"></a>
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-help-circle-dark.svg">
@@ -223,6 +226,7 @@ A:
 - **Launcher runtime**: delete `~/.local/share/AnkiBlurProgramFiles/` (Linux; equivalent data dir on other platforms)
 - **User data**: lives in the shared `~/.local/share/Anki2/` — do NOT delete it if you also use stock Anki, it holds your cards and profiles for both
 
+<a id="how-it-works"></a>
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-layers-dark.svg">
