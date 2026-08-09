@@ -189,45 +189,67 @@ Requires **glibc 2.36 or newer**.
 
 ### Installation Issues
 
-**The blur effect isn't working on Linux**
+<details>
+<summary><big><big><b>macOS</b></big></big></summary>
 
-> Blur effects require a compositor. Install one of these:
-> - **Wayland**: Sway, Hyprland, or GNOME (Mutter)
-> - **X11**: KWin (KDE), Compiz, or Picom
-
-**Getting "libEGL.so.1 not found" error on NixOS**
-
-> The bundled binaries expect a conventional filesystem layout. Run AnkiBlur through `nixGL` (e.g. `nixGL ./anki`) or `steam-run`.
-
-**AppImage won't run - "Permission denied"**
-
-> Make it executable: `chmod +x ankiblur-*.AppImage`
+<br>
 
 **macOS says "AnkiBlur.app is damaged"**
 
 > Right-click the app, select "Open", then click "Open" in the security dialog.
 
+</details>
+
+<details>
+<summary><big><big><b>Windows</b></big></big></summary>
+
+<br>
+
 **Windows Defender blocks the installer**
 
-> This is a false positive. Click "More info" → "Run anyway" or temporarily disable real-time protection.
+> AnkiBlur's Windows releases aren't code-signed, so Windows has no publisher to
+> verify and raises the alarm on every install. That's expected, not a sign
+> something is wrong. Click **More info** → **Run anyway** to continue.
 
-### Performance & Features
+</details>
 
-**Does AnkiBlur affect performance?**
+<details>
+<summary><big><big><b>Linux</b></big></big></summary>
 
-> Minimal impact. The blur effect uses hardware acceleration when available.
+<br>
+
+**The blur effect isn't working**
+
+> Blur effects require a compositor. Install one of these:
+> - **Wayland**: Sway, Hyprland, or GNOME (Mutter)
+> - **X11**: KWin (KDE), Compiz, or Picom
+
+**AppImage won't run - "Permission denied"**
+
+> Make it executable: `chmod +x AnkiBlur-*.AppImage`
+
+</details>
+
+### Addons and making Anki all pwetty :3
 
 **Can I adjust the transparency level?**
 
 > The window canvas is fully transparent; what you see is a configurable tint drawn by the bundled AnkiBlur addon. Change the tint color and alpha per theme in Anki under Tools → Add-ons → AnkiBlur Background Theme → Config (defaults: light `#ffffff` at alpha 15, dark `#1a1a2e` at alpha 25).
 
+**How can I make the background more [insert colour] while keeping the blur?**
+
+> That's what the bundled **AnkiBlur Background Theme** add-on is for — it tints the
+> transparent canvas with a colour and an alpha (opacity), so the blur still shows
+> through. If you installed AnkiBlur you already have it: go to
+> **Tools → Add-ons → AnkiBlur Background Theme → Config** and set `color` (hex) and
+> `alpha` (0–255) for the light and dark themes independently.
+
 **Does AnkiBlur support add-ons?**
 
-> Yes! All Anki add-ons are fully compatible.
-
-**How do I update AnkiBlur?**
-
-> Download and install the latest version. Your data and settings are preserved.
+> Yes, all Anki add-ons are fully compatible — but AnkiBlur is new, and some
+> theming add-ons paint an opaque background over the transparent canvas, which
+> hides the blur. If that happens, toggle your theming add-ons off one at a time to
+> find the culprit, then set its background color to none/transparent in its config.
 
 ### Troubleshooting
 
@@ -236,10 +258,6 @@ Requires **glibc 2.36 or newer**.
 > Try these solutions:
 > 1. Update your graphics drivers
 > 2. Reset preferences: delete `~/.local/share/Anki2/prefs21.db` — note this file is shared with stock Anki, so back it up first
-
-**Sync isn't working**
-
-> Check your internet connection and AnkiWeb credentials. Sync works identically to regular Anki.
 
 **Getting "Qt platform plugin" errors**
 
