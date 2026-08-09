@@ -175,72 +175,84 @@ Requires **glibc 2.36 or newer**.
 
 ### General Questions
 
-**Q: What's the difference between AnkiBlur and regular Anki?**
-A: AnkiBlur is identical to Anki but with window transparency and blur effects. All Anki features work exactly the same.
+**What's the difference between AnkiBlur and regular Anki?**
 
-**Q: Will my existing Anki data work with AnkiBlur?**
-A: Yes! AnkiBlur uses the same data format and profile system as Anki. Your cards, decks, and settings are fully compatible.
+> AnkiBlur is identical to Anki but with window transparency and blur effects. All Anki features work exactly the same.
 
-**Q: Can I run both Anki and AnkiBlur on the same system?**
-A: Yes, they can be installed side by side. Be aware that they share the same Anki data directory and profiles (`~/.local/share/Anki2` on Linux, and the platform equivalents) — your decks, settings and add-ons are common to both. Only the launcher runtime lives separately (in `AnkiBlurProgramFiles` instead of `AnkiProgramFiles`). Don't run both at the same time.
+**Will my existing Anki data work with AnkiBlur?**
 
-**Q: How do I sync my data between devices?**
-A: Use AnkiWeb sync exactly like regular Anki. Your AnkiWeb account works with both.
+> Yes! AnkiBlur uses the same data format and profile system as Anki. Your cards, decks, and settings are fully compatible.
+
+**Can I run both Anki and AnkiBlur on the same system?**
+
+> Yes, they can be installed side by side. Be aware that they share the same Anki data directory and profiles (`~/.local/share/Anki2` on Linux, and the platform equivalents) — your decks, settings and add-ons are common to both. Only the launcher runtime lives separately (in `AnkiBlurProgramFiles` instead of `AnkiProgramFiles`). Don't run both at the same time.
 
 ### Installation Issues
 
-**Q: The blur effect isn't working on Linux**
-A: Blur effects require a compositor. Install one of these:
-- **Wayland**: Sway, Hyprland, or GNOME (Mutter)
-- **X11**: KWin (KDE), Compiz, or Picom
+**The blur effect isn't working on Linux**
 
-**Q: Getting "libEGL.so.1 not found" error on NixOS**
-A: The bundled binaries expect a conventional filesystem layout. Run AnkiBlur through `nixGL` (e.g. `nixGL ./anki`) or `steam-run`.
+> Blur effects require a compositor. Install one of these:
+> - **Wayland**: Sway, Hyprland, or GNOME (Mutter)
+> - **X11**: KWin (KDE), Compiz, or Picom
 
-**Q: AppImage won't run - "Permission denied"**
-A: Make it executable: `chmod +x ankiblur-*.AppImage`
+**Getting "libEGL.so.1 not found" error on NixOS**
 
-**Q: macOS says "AnkiBlur.app is damaged"**
-A: Right-click the app, select "Open", then click "Open" in the security dialog.
+> The bundled binaries expect a conventional filesystem layout. Run AnkiBlur through `nixGL` (e.g. `nixGL ./anki`) or `steam-run`.
 
-**Q: Windows Defender blocks the installer**
-A: This is a false positive. Click "More info" → "Run anyway" or temporarily disable real-time protection.
+**AppImage won't run - "Permission denied"**
+
+> Make it executable: `chmod +x ankiblur-*.AppImage`
+
+**macOS says "AnkiBlur.app is damaged"**
+
+> Right-click the app, select "Open", then click "Open" in the security dialog.
+
+**Windows Defender blocks the installer**
+
+> This is a false positive. Click "More info" → "Run anyway" or temporarily disable real-time protection.
 
 ### Performance & Features
 
-**Q: Does AnkiBlur affect performance?**
-A: Minimal impact. The blur effect uses hardware acceleration when available.
+**Does AnkiBlur affect performance?**
 
-**Q: Can I adjust the transparency level?**
-A: The window canvas is fully transparent; what you see is a configurable tint drawn by the bundled AnkiBlur addon. Change the tint color and alpha per theme in Anki under Tools → Add-ons → AnkiBlur Background Theme → Config (defaults: light `#ffffff` at alpha 15, dark `#1a1a2e` at alpha 25).
+> Minimal impact. The blur effect uses hardware acceleration when available.
 
-**Q: Does AnkiBlur support add-ons?**
-A: Yes! All Anki add-ons are fully compatible.
+**Can I adjust the transparency level?**
 
-**Q: How do I update AnkiBlur?**
-A: Download and install the latest version. Your data and settings are preserved.
+> The window canvas is fully transparent; what you see is a configurable tint drawn by the bundled AnkiBlur addon. Change the tint color and alpha per theme in Anki under Tools → Add-ons → AnkiBlur Background Theme → Config (defaults: light `#ffffff` at alpha 15, dark `#1a1a2e` at alpha 25).
+
+**Does AnkiBlur support add-ons?**
+
+> Yes! All Anki add-ons are fully compatible.
+
+**How do I update AnkiBlur?**
+
+> Download and install the latest version. Your data and settings are preserved.
 
 ### Troubleshooting
 
-**Q: AnkiBlur crashes on startup**
-A: Try these solutions:
-1. Update your graphics drivers
-2. Reset preferences: delete `~/.local/share/Anki2/prefs21.db` — note this file is shared with stock Anki, so back it up first
+**AnkiBlur crashes on startup**
 
-**Q: Sync isn't working**
-A: Check your internet connection and AnkiWeb credentials. Sync works identically to regular Anki.
+> Try these solutions:
+> 1. Update your graphics drivers
+> 2. Reset preferences: delete `~/.local/share/Anki2/prefs21.db` — note this file is shared with stock Anki, so back it up first
 
-**Q: Getting "Qt platform plugin" errors**
-A: Qt itself ships inside the bundled PyQt6 wheels; what's usually missing are the system xcb runtime libraries it loads:
-- **Ubuntu/Debian**: `sudo apt install libxcb-cursor0 libxcb-xinerama0`
+**Sync isn't working**
 
-**Q: How do I completely uninstall AnkiBlur?**
-A:
-- **Linux**: `sudo apt remove ankiblur` (for the .deb) or delete the AppImage
-- **macOS**: Drag the app to Trash
-- **Windows**: Use "Add/Remove Programs" or run the uninstaller
-- **Launcher runtime**: delete `~/.local/share/AnkiBlurProgramFiles/` (Linux; equivalent data dir on other platforms)
-- **User data**: lives in the shared `~/.local/share/Anki2/` — do NOT delete it if you also use stock Anki, it holds your cards and profiles for both
+> Check your internet connection and AnkiWeb credentials. Sync works identically to regular Anki.
+
+**Getting "Qt platform plugin" errors**
+
+> Qt itself ships inside the bundled PyQt6 wheels; what's usually missing are the system xcb runtime libraries it loads:
+> - **Ubuntu/Debian**: `sudo apt install libxcb-cursor0 libxcb-xinerama0`
+
+**How do I completely uninstall AnkiBlur?**
+
+> - **Linux**: `sudo apt remove ankiblur` (for the .deb) or delete the AppImage
+> - **macOS**: Drag the app to Trash
+> - **Windows**: Use "Add/Remove Programs" or run the uninstaller
+> - **Launcher runtime**: delete `~/.local/share/AnkiBlurProgramFiles/` (Linux; equivalent data dir on other platforms)
+> - **User data**: lives in the shared `~/.local/share/Anki2/` — do NOT delete it if you also use stock Anki, it holds your cards and profiles for both
 
 <a id="how-it-works"></a>
 <h2>
