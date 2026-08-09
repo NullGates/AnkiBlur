@@ -172,7 +172,6 @@ Requires **glibc 2.36 or newer**.
 <br>
 
 **macOS says "AnkiBlur.app is damaged"**
-
 > Right-click the app, select "Open", then click "Open" in the security dialog.
 
 </details>
@@ -183,7 +182,6 @@ Requires **glibc 2.36 or newer**.
 <br>
 
 **Windows Defender blocks the installer**
-
 > AnkiBlur's Windows releases aren't code-signed, so Windows has no publisher to
 > verify and raises the alarm on every install. That's expected, not a sign
 > something is wrong. Click **More info** → **Run anyway** to continue.
@@ -196,18 +194,15 @@ Requires **glibc 2.36 or newer**.
 <br>
 
 **Getting "Qt platform plugin" errors**
-
 > Qt itself ships inside the bundled PyQt6 wheels; what's usually missing are the system xcb runtime libraries it loads:
 > - **Ubuntu/Debian**: `sudo apt install libxcb-cursor0 libxcb-xinerama0`
 
 **The blur effect isn't working**
-
 > Blur effects require a compositor. Install one of these:
 > - **Wayland**: Sway, Hyprland, or GNOME (Mutter)
 > - **X11**: KWin (KDE), Compiz, or Picom
 
 **AppImage won't run - "Permission denied"**
-
 > Make it executable: `chmod +x AnkiBlur-*.AppImage`
 
 </details>
@@ -225,11 +220,9 @@ Requires **glibc 2.36 or newer**.
 ### General Questions
 
 **What's the difference between AnkiBlur and regular Anki?**
-
 > AnkiBlur is identical to Anki but with window transparency and blur effects. All Anki features work exactly the same.
 
 **Will my existing Anki data work, and can I run both Anki and AnkiBlur?**
-
 > Anki and AnkiBlur share the same data directory (where your cards and decks are).
 > Don't run both at the same time, as they aren't used to this setup.
 
@@ -240,7 +233,6 @@ If these questions don't handle your case, please
 to help you :)
 
 **I installed AnkiBlur and the window is transparent, but there's no blur**
-
 > AnkiBlur makes the window transparent and asks your OS to blur what's behind it —
 > it can't draw the blur itself. On **Linux** that means you need a compositor that
 > implements blur (KWin, Hyprland, Picom with blur enabled…); without one you get
@@ -249,7 +241,6 @@ to help you :)
 > version and I'll take a look at it.
 
 **The blur worked, then a theming add-on made it disappear**
-
 > Some theming add-ons paint an opaque background over the transparent canvas.
 > Toggle your theming add-ons off one at a time to find the culprit, then set its
 > background colour to none/transparent in its config.
@@ -257,20 +248,17 @@ to help you :)
 ### Addons and making Anki all pwetty :3
 
 **Does AnkiBlur support add-ons?**
-
 > Yes, all Anki add-ons are fully compatible — but AnkiBlur is new, and some
 > theming add-ons paint an opaque background over the transparent canvas, which
 > hides the blur. If that happens, toggle your theming add-ons off one at a time to
 > find the culprit, then set its background color to none/transparent in its config.
 
 **Can I adjust the transparency level?**
-
 > You can change the tint color and alpha per theme in Anki under Tools → Add-ons → AnkiBlur Background Theme → Config (defaults: light `#ffffff` at alpha 15, dark `#1a1a2e` at alpha 25).
 >
 > This is very platform specific, this section will need more love.
 
 **How can I make the background more [insert colour] while keeping the blur?**
-
 > That's what the bundled **AnkiBlur Background Theme** add-on is for — it tints the
 > transparent canvas with a colour and an alpha (opacity), so the blur still shows
 > through. If you installed AnkiBlur you already have it: go to
@@ -280,7 +268,6 @@ to help you :)
 ### Updating and Uninstalling
 
 **How do I completely uninstall AnkiBlur?**
-
 > - **Linux**: `sudo apt remove ankiblur` (for the .deb) or delete the AppImage
 > - **macOS**: Drag the app to Trash
 > - **Windows**: Use "Add/Remove Programs" or run the uninstaller
