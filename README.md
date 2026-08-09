@@ -72,11 +72,8 @@
   Installation
 </h2>
 
-Every method ships only the launcher. On first run it downloads Anki and the Qt
-runtime into `AnkiBlurProgramFiles`, so the first launch needs a network connection.
-
 <details>
-<summary><big><b>macOS</b></big></summary>
+<summary><big><big><b>macOS</b></big></big></summary>
 
 <br>
 
@@ -94,7 +91,7 @@ Requires macOS 10.15 or newer. To uninstall, drag the app to the Trash.
 </details>
 
 <details>
-<summary><big><b>Windows</b></big></summary>
+<summary><big><big><b>Windows</b></big></big></summary>
 
 <br>
 
@@ -112,7 +109,7 @@ Requires Windows 10 1803 or newer for the blur effect. To uninstall, use
 </details>
 
 <details>
-<summary><big><b>Linux</b></big></summary>
+<summary><big><big><b>Linux</b></big></big></summary>
 
 <br>
 
