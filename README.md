@@ -164,29 +164,6 @@ Requires **glibc 2.36 or newer**.
 
 </details>
 
-<a id="faq"></a>
-<h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-help-circle-dark.svg">
-    <img src="./docs/icon-help-circle-light.svg" height="40" align="center" alt="">
-  </picture>
-  FAQ
-</h2>
-
-### General Questions
-
-**What's the difference between AnkiBlur and regular Anki?**
-
-> AnkiBlur is identical to Anki but with window transparency and blur effects. All Anki features work exactly the same.
-
-**Will my existing Anki data work with AnkiBlur?**
-
-> Yes! AnkiBlur uses the same data format and profile system as Anki. Your cards, decks, and settings are fully compatible.
-
-**Can I run both Anki and AnkiBlur on the same system?**
-
-> Yes, they can be installed side by side. Be aware that they share the same Anki data directory and profiles (`~/.local/share/Anki2` on Linux, and the platform equivalents) — your decks, settings and add-ons are common to both. Only the launcher runtime lives separately (in `AnkiBlurProgramFiles` instead of `AnkiProgramFiles`). Don't run both at the same time.
-
 ### Installation Issues
 
 <details>
@@ -229,6 +206,46 @@ Requires **glibc 2.36 or newer**.
 > Make it executable: `chmod +x AnkiBlur-*.AppImage`
 
 </details>
+
+
+<a id="faq"></a>
+<h2>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-help-circle-dark.svg">
+    <img src="./docs/icon-help-circle-light.svg" height="40" align="center" alt="">
+  </picture>
+  FAQ
+</h2>
+
+### General Questions
+
+**What's the difference between AnkiBlur and regular Anki?**
+
+> AnkiBlur is identical to Anki but with window transparency and blur effects. All Anki features work exactly the same.
+
+**Will my existing Anki data work with AnkiBlur?**
+
+> Yes! AnkiBlur uses the same data format and profile system as Anki. Your cards, decks, and settings are fully compatible.
+
+**Can I run both Anki and AnkiBlur on the same system?**
+
+> Yes, they can be installed side by side. Be aware that they share the same Anki data directory and profiles (`~/.local/share/Anki2` on Linux, and the platform equivalents) — your decks, settings and add-ons are common to both. Only the launcher runtime lives separately (in `AnkiBlurProgramFiles` instead of `AnkiProgramFiles`). Don't run both at the same time.
+
+### Why is the blur not showing !!! >:[
+
+**I installed AnkiBlur and the window is transparent, but there's no blur**
+
+> AnkiBlur makes the window transparent and asks your OS to blur what's behind it —
+> it can't draw the blur itself. On **Linux** that means you need a compositor that
+> implements blur (KWin, Hyprland, Picom with blur enabled…); without one you get
+> transparency and nothing else. **macOS** and **Windows** blur natively, so if it's
+> missing there, check the next answer.
+
+**The blur worked, then a theming add-on made it disappear**
+
+> Some theming add-ons paint an opaque background over the transparent canvas.
+> Toggle your theming add-ons off one at a time to find the culprit, then set its
+> background colour to none/transparent in its config.
 
 ### Addons and making Anki all pwetty :3
 
