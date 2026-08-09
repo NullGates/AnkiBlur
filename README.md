@@ -20,16 +20,16 @@
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-download-dark.svg">
-    <img src="./docs/icon-download-light.svg" height="24" align="center" alt="">
+    <img src="./docs/icon-download-light.svg" height="36" align="center" alt="">
   </picture>
   Download
 </h2>
 
 | Platform | Supported Architecture | Download Latest | Blur Support |
 |:---|:---|:---|---|
-|  <img width="150" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /> | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon](https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)| Native blur support (macOS 10.15+) |
-| <img width="200" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) <br>![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| [![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Native blur support (Windows 10 1803+)<br>Installer is unsigned — SmartScreen will warn |
-| <img width="150" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" /> | ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) [![download_deb](https://custom-icon-badges.demolab.com/badge/Download%20-.deb-blue?style=for-the-badge&logoSource=simple-icons&logo=debian&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)<br> [![download_rpm](https://custom-icon-badges.demolab.com/badge/Download%20-.rpm-blue?style=for-the-badge&logoSource=simple-icons&logo=fedora&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) [![download_tarzst](https://custom-icon-badges.demolab.com/badge/Download%20-.tar.zst-blue?style=for-the-badge&logoSource=feather&logo=package&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)<br> [![nixos_flake](https://custom-icon-badges.demolab.com/badge/I'm%20working%20on%20it...%20-flake-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur)<br> [![nixos_stable](https://custom-icon-badges.demolab.com/badge/also%20working%20on%20it%20%3A3%20-Nix%20stable%20pkgs-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur) | Requires a compositor implementing blur<br>Needs glibc 2.36 or newer |
+|  <img height="28" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /> | ![apple_intel](https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![apple_silicon](https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_dmg](https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)| Native blur support (macOS 10.15+) |
+| <img height="28" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /> | ![windows_x64](https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) <br>![windows_arm64](https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e)| [![download_exe](https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) | Native blur support (Windows 10 1803+)<br>Installer is unsigned — SmartScreen will warn |
+| <img height="28" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" /> | ![linux_x86](https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) ![linux_aarch64](https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e) | [![download_AppImage](https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) [![download_deb](https://custom-icon-badges.demolab.com/badge/Download%20-.deb-blue?style=for-the-badge&logoSource=simple-icons&logo=debian&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)<br> [![download_rpm](https://custom-icon-badges.demolab.com/badge/Download%20-.rpm-blue?style=for-the-badge&logoSource=simple-icons&logo=fedora&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest) [![download_tarzst](https://custom-icon-badges.demolab.com/badge/Download%20-.tar.zst-blue?style=for-the-badge&logoSource=feather&logo=package&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur/releases/latest)<br> [![nixos_flake](https://custom-icon-badges.demolab.com/badge/I'm%20working%20on%20it...%20-flake-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur)<br> [![nixos_stable](https://custom-icon-badges.demolab.com/badge/also%20working%20on%20it%20%3A3%20-Nix%20stable%20pkgs-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e)](https://github.com/NullGates/AnkiBlur) | Requires a compositor implementing blur<br>Needs glibc 2.36 or newer |
 
 
 [comment]: <> (<img src="https://tender-wash.surge.sh/white-alert-triangle.svg" alt="alert-triangle" style="width: 20px; height: 20px; margin-right: 10px;">) 
@@ -40,7 +40,7 @@
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-hash-dark.svg">
-    <img src="./docs/icon-hash-light.svg" height="24" align="center" alt="">
+    <img src="./docs/icon-hash-light.svg" height="36" align="center" alt="">
   </picture>
   Installation
 </h2>
@@ -48,7 +48,7 @@
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-help-circle-dark.svg">
-    <img src="./docs/icon-help-circle-light.svg" height="24" align="center" alt="">
+    <img src="./docs/icon-help-circle-light.svg" height="36" align="center" alt="">
   </picture>
   FAQ
 </h2>
@@ -125,7 +125,7 @@ A:
 <h2>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./docs/icon-layers-dark.svg">
-    <img src="./docs/icon-layers-light.svg" height="24" align="center" alt="">
+    <img src="./docs/icon-layers-light.svg" height="36" align="center" alt="">
   </picture>
   How It Works
 </h2>
