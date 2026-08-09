@@ -298,28 +298,12 @@ Requires **glibc 2.36 or newer**.
   How It Works
 </h2>
 
-AnkiBlur is the official Anki launcher plus a bundled add-on — no Anki source
-files are modified on your machine:
-
-1. **Branding (build time)**: the launcher source is patched so the app
-   presents itself as "AnkiBlur" and installs alongside stock Anki (I'm not
-   allowed to post as "Anki", altough all credits goes to the ankitechts !).
-2. **Bundled add-on (runtime)**: the entire blur/transparency payload ships as
-   a regular Anki add-on (`ankiblur_background_theme`) embedded in the
-   launcher binary and installed into your `addons21/` folder. At load time it
-   uses only stable, supported Anki APIs (`gui_hooks`, `anki.hooks.wrap`,
-   direct Qt calls) to:
-   - make the main window translucent and ask the OS for native blur
-     (macOS glass, Windows acrylic, your compositor's blur rules on Linux),
-   - render the main webviews (card area, toolbars) on a transparent canvas
-     with a configurable tint overlay.
-3. **Self-check**: after startup the add-on verifies the effects actually
-   applied and shows a warning inside Anki (once per Anki version) if an
-   upstream change ever breaks them — nothing fails silently.
-
-Because nothing is text-patched at runtime, AnkiBlur keeps working across Anki
-point releases; a weekly CI probe additionally checks each new aqt release for
-the handful of symbols the add-on relies on.
+<p align="center">
+  I will be updating this section on a day where I have something very stressful to
+  do and suddenly all the boring chores become interesting — the inner workings of
+  AnkiBlur are freaking complicated, and maintaining it is even more a pain (thank
+  goodness we have Claude!).
+</p>
 
 <p align="center">
   Licensed under AGPL-3.0-or-later — see <a href="LICENSE">LICENSE</a> and <a href="NOTICE">NOTICE</a>.
