@@ -72,21 +72,33 @@
   Installation
 </h2>
 
+> *"Wait — why is it opening a command line? Am I being hacked? I don't remember
+> this happening when I installed Anki back in the day."*
+>
+> You're not being hacked, and you're not misremembering. Anki switched to a
+> launcher-based install: instead of shipping one big bundle, a small launcher
+> downloads Anki and its Python/Qt runtime on first run. That's the terminal you
+> see. The decision was made upstream by Anki's maintainer to cut release overhead
+> and get something close to auto-updates — see discussion
+> [ankitects/anki#4556](https://github.com/ankitects/anki/issues/4556).
+
 <details>
 <summary><big><big><b>macOS</b></big></big></summary>
 
 <br>
 
 1. Download the `.dmg` from the [latest release](https://github.com/NullGates/AnkiBlur/releases/latest).
-2. Open it and drag **Anki.app** to your `Applications` folder.
-3. Launch it from Applications or Spotlight.
+2. Open it and drag **AnkiBlur.app** to your `Applications` folder.
+3. Launch it from Applications or Spotlight. The first run opens a terminal with
+   the **AnkiBlur Launcher** menu — press <kbd>Enter</kbd> to take the latest version.
+   It downloads Anki, the Qt runtime and the blur add-on, then tells you the
+   window can be closed.
 
-The DMG is signed and notarized, so Gatekeeper lets it open normally.
+Later launches skip the menu and start AnkiBlur directly.
 
-> **Note:** the bundle is named `Anki.app`, so it will overwrite stock Anki if you
-> have it installed. Rename one of them if you want to keep both.
-
-Requires macOS 10.15 or newer. To uninstall, drag the app to the Trash.
+> **Note:** the DMG is signed and notarized, so Gatekeeper lets it open normally.
+> That runs on my own Apple Developer account ($99/year, out of pocket) — donations
+> toward it are very welcome.
 
 </details>
 
@@ -97,14 +109,16 @@ Requires macOS 10.15 or newer. To uninstall, drag the app to the Trash.
 
 1. Download the `.exe` from the [latest release](https://github.com/NullGates/AnkiBlur/releases/latest).
 2. Run it. SmartScreen will warn that the publisher is unknown — click **More info** → **Run anyway**.
-3. Launch **AnkiBlur** from the Start menu.
+3. Launch **AnkiBlur** from the Start menu. The first run opens a console with the
+   **AnkiBlur Launcher** menu — press <kbd>Enter</kbd> to take the latest version. It
+   downloads Anki, the Qt runtime and the blur add-on, then tells you the window
+   can be closed.
 
-The installer is unsigned (AnkiBlur has no code-signing certificate), so that
-warning is expected on every install. It installs per-user to
-`%LOCALAPPDATA%\Programs\AnkiBlur` and needs no admin rights.
+Later launches skip the menu and start AnkiBlur directly.
 
-Requires Windows 10 1803 or newer for the blur effect. To uninstall, use
-**Add/Remove Programs**.
+> **Note:** the installer is unsigned (AnkiBlur has no code-signing certificate),
+> so that warning is expected on every install. It installs per-user to
+> `%LOCALAPPDATA%\Programs\AnkiBlur` and needs no admin rights.
 
 </details>
 
@@ -118,13 +132,13 @@ Pick the format that matches your distro — all are on the
 
 **Debian / Ubuntu / Mint / Pop!_OS**
 ```bash
-sudo apt install ./ankiblur_*_amd64.deb
+sudo apt install ./ankiblur_*.deb
 ankiblur
 ```
 
 **Fedora / RHEL / openSUSE**
 ```bash
-sudo dnf install ./ankiblur-*.x86_64.rpm   # openSUSE: sudo zypper install ./ankiblur-*.rpm
+sudo dnf install ./ankiblur-*.rpm   # openSUSE: sudo zypper install ./ankiblur-*.rpm
 ankiblur
 ```
 
@@ -134,14 +148,19 @@ chmod +x AnkiBlur-*.AppImage
 ./AnkiBlur-*.AppImage
 ```
 
+**NixOS** — *to be arriving*
+
+The first run opens the **AnkiBlur Launcher** menu in your terminal — press
+<kbd>Enter</kbd> to take the latest version. It downloads Anki, the Qt runtime and the
+blur add-on, then prompts you to press <kbd>Enter</kbd> again to start. Later launches skip the
+menu and start AnkiBlur directly.
+
 The `.deb` and `.rpm` install the command as `ankiblur` and add a menu entry, so
 they sit alongside stock Anki without conflict. The `.tar.zst` is the plain
 launcher payload for distros that match neither family — extract it and run
 `./anki`.
 
-Requires **glibc 2.36 or newer** (Ubuntu 24.04+, Debian 12+, Fedora 37+) and a
-compositor that implements blur. To uninstall: `sudo apt remove ankiblur`,
-`sudo dnf remove ankiblur`, or delete the AppImage.
+Requires **glibc 2.36 or newer**.
 
 </details>
 
