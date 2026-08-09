@@ -29,7 +29,7 @@
   <thead>
     <tr>
       <th width="200" align="left">Platform</th>
-      <th width="190" align="left">Supported Architecture</th>
+      <th width="240" align="left">Supported Architecture</th>
       <th width="300" align="left">Download Latest</th>
       <th width="260" align="left">Blur Support</th>
     </tr>
@@ -37,19 +37,19 @@
   <tbody>
     <tr>
       <td width="200" valign="middle"><img height="40" src="https://img.shields.io/badge/%20-MacOS-b1cc10?style=for-the-badge&logo=apple&logoColor=white&labelColor=2e2e2e" /></td>
-      <td width="190" valign="middle"><img height="20" alt="apple_intel" src="https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"> <img height="20" alt="apple_silicon" src="https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"></td>
+      <td width="240" valign="middle"><img height="28" alt="apple_intel" src="https://custom-icon-badges.demolab.com/badge/%20-Intel-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"> <img height="28" alt="apple_silicon" src="https://custom-icon-badges.demolab.com/badge/%20-silicon-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"></td>
       <td width="300" valign="middle"><a href="https://github.com/NullGates/AnkiBlur/releases/latest"><img height="22" alt="download_dmg" src="https://custom-icon-badges.demolab.com/badge/Download%20-.dmg-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e"></a></td>
       <td width="260" valign="middle">Native blur support (macOS 10.15+)</td>
     </tr>
     <tr>
       <td width="200" valign="middle"><img height="40" src="https://custom-icon-badges.demolab.com/badge/%20-windows-b1cc10?style=for-the-badge&logo=windowsz&logoColor=white&labelColor=2e2e2e" /></td>
-      <td width="190" valign="middle"><img height="20" alt="windows_x64" src="https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"> <br><img height="20" alt="windows_arm64" src="https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e"></td>
+      <td width="240" valign="middle"><img height="28" alt="windows_x64" src="https://custom-icon-badges.demolab.com/badge/%20-%C3%9764-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"> <br><img height="28" alt="windows_arm64" src="https://custom-icon-badges.demolab.com/badge/%20-ARM64-e35007?style=for-the-badge&logoSource=feather&logo=x&logoColor=white&labelColor=2e2e2e"></td>
       <td width="300" valign="middle"><a href="https://github.com/NullGates/AnkiBlur/releases/latest"><img height="22" alt="download_exe" src="https://custom-icon-badges.demolab.com/badge/Download%20-.exe-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e"></a></td>
       <td width="260" valign="middle">Native blur support (Windows 10 1803+)<br>Installer is unsigned — SmartScreen will warn</td>
     </tr>
     <tr>
       <td width="200" valign="middle"><img height="40" src="https://img.shields.io/badge/%20-Linux-b1cc10?style=for-the-badge&logo=linux&logoColor=white&labelColor=2e2e2e" /></td>
-      <td width="190" valign="middle"><img height="20" alt="linux_x86" src="https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"> <img height="20" alt="linux_aarch64" src="https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"></td>
+      <td width="240" valign="middle"><img height="28" alt="linux_x86" src="https://custom-icon-badges.demolab.com/badge/%20-%C3%9786-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"> <img height="28" alt="linux_aarch64" src="https://custom-icon-badges.demolab.com/badge/%20-aarch64-59b300?style=for-the-badge&logoSource=feather&logo=check&logoColor=white&labelColor=2e2e2e"></td>
       <td width="300" valign="middle"><a href="https://github.com/NullGates/AnkiBlur/releases/latest"><img height="22" alt="download_AppImage" src="https://custom-icon-badges.demolab.com/badge/Download%20-AppImage-blue?style=for-the-badge&logoSource=feather&logo=download&logoColor=white&labelColor=2e2e2e"></a> <a href="https://github.com/NullGates/AnkiBlur/releases/latest"><img height="22" alt="download_deb" src="https://custom-icon-badges.demolab.com/badge/Download%20-.deb-blue?style=for-the-badge&logoSource=simple-icons&logo=debian&logoColor=white&labelColor=2e2e2e"></a><br> <a href="https://github.com/NullGates/AnkiBlur/releases/latest"><img height="22" alt="download_rpm" src="https://custom-icon-badges.demolab.com/badge/Download%20-.rpm-blue?style=for-the-badge&logoSource=simple-icons&logo=fedora&logoColor=white&labelColor=2e2e2e"></a> <a href="https://github.com/NullGates/AnkiBlur/releases/latest"><img height="22" alt="download_tarzst" src="https://custom-icon-badges.demolab.com/badge/Download%20-.tar.zst-blue?style=for-the-badge&logoSource=feather&logo=package&logoColor=white&labelColor=2e2e2e"></a><br> <a href="https://github.com/NullGates/AnkiBlur"><img height="22" alt="nixos_flake" src="https://custom-icon-badges.demolab.com/badge/I'm%20working%20on%20it...%20-flake-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e"></a> <a href="https://github.com/NullGates/AnkiBlur"><img height="22" alt="nixos_stable" src="https://custom-icon-badges.demolab.com/badge/also%20working%20on%20it%20%3A3%20-Nix%20stable%20pkgs-8a8a8a?style=for-the-badge&logoSource=simple-icons&logo=nixos&logoColor=white&labelColor=2e2e2e"></a></td>
       <td width="260" valign="middle">Requires a compositor implementing blur<br>Needs glibc 2.36 or newer</td>
     </tr>
