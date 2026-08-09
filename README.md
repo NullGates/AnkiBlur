@@ -1,10 +1,8 @@
-# AnkiBlur
+<p align="center">
+  <img src="screenshot.png" alt="AnkiBlur screenshot showing window blur effect" width="100%">
+</p>
 
 This repo takes the official [Anki](https://github.com/ankitects/anki) and applies patches on top to achieve a window blur effect. Builds are currently pinned to Anki 25.09; new Anki releases require a manual version bump.
-
-<p align="center">
-  <img src="screenshot.png" alt="AnkiBlur screenshot showing window blur effect" width="70%">
-</p>
 
 ## Downloads
 
