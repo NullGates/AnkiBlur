@@ -25,6 +25,7 @@ try:
     from aqt.theme import theme_manager
     from anki.hooks import wrap
 
+    from . import defaults
     from . import tripwire
     from . import webview_transparency
     from . import window_effects
@@ -62,7 +63,7 @@ try:
 
     class TransparentOverlay:
         def __init__(self):
-            self.config = mw.addonManager.getConfig(__name__)
+            self.config = defaults.effective_config(mw.addonManager, __name__)
             self.main_window_contexts = _build_main_window_contexts()
             self.migrate_config_if_needed()
             self.setup_hooks()
@@ -71,10 +72,10 @@ try:
 
         def migrate_config_if_needed(self):
             """Migrate old single-theme config to new dual-theme format"""
-            if self.config is None:
+            if not self.config:
                 self.config = {
-                    "light_theme": {"color": "#ffffff", "alpha": 15},
-                    "dark_theme": {"color": "#000000", "alpha": 30}
+                    "light_theme": defaults.theme_fallback(is_dark=False),
+                    "dark_theme": defaults.theme_fallback(is_dark=True),
                 }
                 return
 
@@ -116,13 +117,8 @@ try:
             is_dark = theme_manager.night_mode
             theme_key = "dark_theme" if is_dark else "light_theme"
 
-            # Fallback if theme config missing
-            fallback = {
-                "color": "#000000" if is_dark else "#ffffff",
-                "alpha": 30 if is_dark else 15
-            }
-
-            return self.config.get(theme_key, fallback)
+            # Fallback if theme config missing (platform-aware)
+            return self.config.get(theme_key, defaults.theme_fallback(is_dark))
 
         def inject_current_theme_style(self, webview):
             """Inject current theme overlay style into a main-window webview"""

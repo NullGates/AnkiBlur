@@ -4,6 +4,8 @@ from aqt import mw
 from aqt.qt import *  # noqa: F403
 from aqt.theme import theme_manager
 
+from . import defaults
+
 
 class ColorConfigDialog(QDialog):
     def __init__(self, parent=None):
@@ -16,10 +18,10 @@ class ColorConfigDialog(QDialog):
     def setup_ui(self):
         main_layout = QVBoxLayout()
 
-        # Get current config
-        self.config = mw.addonManager.getConfig(__name__) or {
-            "light_theme": {"color": "#ffffff", "alpha": 15},
-            "dark_theme": {"color": "#000000", "alpha": 30}
+        # Get current config (platform-aware defaults, e.g. macOS alpha 0)
+        self.config = defaults.effective_config(mw.addonManager, __name__) or {
+            "light_theme": defaults.theme_fallback(is_dark=False),
+            "dark_theme": defaults.theme_fallback(is_dark=True),
         }
 
         # Create tab widget for Light/Dark themes
@@ -65,7 +67,9 @@ class ColorConfigDialog(QDialog):
         layout = QVBoxLayout()
 
         # Get theme config
-        theme_config = self.config.get(theme_key, {"color": "#000000", "alpha": 30})
+        theme_config = self.config.get(
+            theme_key, defaults.theme_fallback(is_dark=theme_key == "dark_theme")
+        )
 
         # Color selection
         color_layout = QHBoxLayout()

@@ -6,6 +6,11 @@
   desktop for Anki's light and dark themes.
   - `color`: `#RRGGBB` hex color of the tint.
   - `alpha`: `0`-`100` opacity of the tint (0 = fully transparent).
+  - Defaults are platform-specific. macOS: `#ff0000` (light) / `#0000ff`
+    (dark), both at alpha `0` - the Liquid Glass material provides the
+    look by itself, so the tint is fully transparent until you raise the
+    alpha. All other platforms: `#ffffff`/15 (light), `#1a1a2e`/25 (dark)
+    as shipped in `config.json`. A value you set yourself always wins.
 - `linux_frameless` (Linux only, default `false`): remove the window
   titlebar/decorations (`FramelessWindowHint`). Leave off on floating
   desktop environments (you would lose the titlebar, close button and
