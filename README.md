@@ -90,7 +90,7 @@
 1. Download the `.dmg` from the [latest release](https://github.com/NullGates/AnkiBlur/releases/latest).
 2. Open it and drag **AnkiBlur.app** to your `Applications` folder.
 3. Launch it from Applications or Spotlight. The first run opens a terminal with
-   the **AnkiBlur Launcher** menu — press <kbd>Enter</kbd> to take the latest version.
+   the **AnkiBlur Launcher** menu — press <kbd>Enter</kbd> to install the supported Anki version.
    It downloads Anki, the Qt runtime and the blur add-on, then tells you the
    window can be closed.
 
@@ -110,7 +110,7 @@ Later launches skip the menu and start AnkiBlur directly.
 1. Download the `.exe` from the [latest release](https://github.com/NullGates/AnkiBlur/releases/latest).
 2. Run it. SmartScreen will warn that the publisher is unknown — click **More info** → **Run anyway**.
 3. Launch **AnkiBlur** from the Start menu. The first run opens a console with the
-   **AnkiBlur Launcher** menu — press <kbd>Enter</kbd> to take the latest version. It
+   **AnkiBlur Launcher** menu — press <kbd>Enter</kbd> to install the supported Anki version. It
    downloads Anki, the Qt runtime and the blur add-on, then tells you the window
    can be closed.
 
@@ -151,7 +151,7 @@ chmod +x AnkiBlur-*.AppImage
 **NixOS** — *to be arriving*
 
 The first run opens the **AnkiBlur Launcher** menu in your terminal — press
-<kbd>Enter</kbd> to take the latest version. It downloads Anki, the Qt runtime and the
+<kbd>Enter</kbd> to install the supported Anki version. It downloads Anki, the Qt runtime and the
 blur add-on, then prompts you to press <kbd>Enter</kbd> again to start. Later launches skip the
 menu and start AnkiBlur directly.
 
