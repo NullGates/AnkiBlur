@@ -1,0 +1,50 @@
+--- original/qt/launcher/src/main.rs
++++ v1_edit/qt/launcher/src/main.rs
+@@ -99,6 +99,27 @@
+ }
+ 
+ fn run() -> Result<()> {
++    // AnkiBlur: refuse to run from the mounted disk image. Installing from
++    // there appears to work, but AnkiBlur.app itself never gets copied to
++    // /Applications, so the "installed" app disappears once the image is
++    // ejected. Send the user to drag it into Applications first.
++    #[cfg(target_os = "macos")]
++    if platform::mac::running_from_dmg() {
++        ensure_terminal_shown()?;
++        print!("\x1B[2J\x1B[H"); // Clear screen and move cursor to top
++        println!("\x1B[1mAnkiBlur is not installed yet\x1B[0m\n");
++        println!("You are running AnkiBlur straight from the downloaded disk image.");
++        println!("Please drag AnkiBlur.app onto the Applications shortcut next to it");
++        println!("in the disk image window, eject the disk image, then launch");
++        println!("AnkiBlur from your Applications folder.");
++        println!();
++        print!("Press enter to close...");
++        let _ = stdout().flush();
++        let mut input = String::new();
++        let _ = stdin().read_line(&mut input);
++        return Ok(());
++    }
++
+     let uv_install_root = if let Ok(custom_root) = std::env::var("ANKI_LAUNCHER_VENV_ROOT") {
+         std::path::PathBuf::from(custom_root)
+     } else {
+--- original/qt/launcher/src/platform/mac.rs
++++ v1_edit/qt/launcher/src/platform/mac.rs
+@@ -97,3 +97,17 @@
+         }
+     }
+ }
++
++// AnkiBlur: true when the launcher is running straight off the mounted
++// disk image, or from Gatekeeper's app-translocation copy of it. Running
++// from there "works" transiently, but AnkiBlur.app itself never reaches
++// /Applications, so the app vanishes for the user once the image is
++// ejected. main.rs refuses to proceed in that case and tells the user to
++// drag the app onto the Applications shortcut shipped inside the DMG.
++pub fn running_from_dmg() -> bool {
++    let Ok(exe) = std::env::current_exe() else {
++        return false;
++    };
++    let path = exe.to_string_lossy();
++    path.starts_with("/Volumes/") || path.contains("/AppTranslocation/")
++}

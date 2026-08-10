@@ -341,6 +341,11 @@ jobs:
         # preserved; we only need the DMG afterwards.
         mkdir -p dmg_stage
         mv out/launcher/AnkiBlur.app dmg_stage/
+        # Drag-install UX: a symlink to /Applications inside the DMG so the
+        # user drags AnkiBlur.app onto it. Required because running the app
+        # straight from the read-only DMG never lands it in /Applications
+        # (the launcher now also detects that and tells the user to drag).
+        ln -s /Applications dmg_stage/Applications
         # AGPL conveyance: ship the license text alongside the app. Files
         # outside the .app do not affect the bundle signature; the DMG is
         # notarized afterwards as before.

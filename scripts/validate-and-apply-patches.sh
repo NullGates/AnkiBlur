@@ -47,6 +47,7 @@ usage() {
     echo "  1. launcher_branding     - Changes Anki branding to AnkiBlur"
     echo "  2. launcher_anki_patches - Dependency injection + legacy venv cleanup"
     echo "  3. launcher_anki_addon   - Embeds the AnkiBlur addon in the launcher"
+    echo "  4. launcher_macos_dmg_guard - macOS: refuse to run from the mounted DMG"
     echo ""
     echo "After the patches apply, the AnkiBlur .ankiaddon is built"
     echo "deterministically from addons/ and staged into qt/launcher/addon/"
@@ -78,6 +79,7 @@ PATCH_DIRS=(
     "01_launcher_branding"
     "02_launcher_apply_anki_patches"
     "03_launcher_apply_anki_addon"
+    "04_launcher_macos_dmg_guard"
 )
 
 # Function to validate patch can be applied
