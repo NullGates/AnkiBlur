@@ -130,11 +130,13 @@ package_linux() {
 package_macos() {
     log_info "Packaging macOS artifacts..."
 
-    local app_bundle="$ANKI_SOURCE/out/launcher/Anki.app"
-    local dmg_file="$ANKI_SOURCE/out/launcher/anki-launcher-$VERSION-mac.dmg"
+    local app_bundle="$ANKI_SOURCE/out/launcher/AnkiBlur.app"
+    # The CI workflow names the DMG AnkiBlur-<pinned anki version>.dmg
+    local dmg_file
+    dmg_file=$(find "$ANKI_SOURCE/out/launcher" -maxdepth 1 -name 'AnkiBlur*.dmg' -type f 2>/dev/null | head -1)
 
     # Check if DMG was created
-    if [[ -f "$dmg_file" ]]; then
+    if [[ -n "$dmg_file" && -f "$dmg_file" ]]; then
         log_success "Found DMG file: $dmg_file"
         cp "$dmg_file" "$ARTIFACTS_DIR/"
         log_success "macOS DMG copied to artifacts"
@@ -142,8 +144,8 @@ package_macos() {
         log_warning "DMG not found, but app bundle exists. Creating DMG manually..."
 
         # Create DMG manually if the build script didn't create one
-        local temp_dmg="$ARTIFACTS_DIR/anki-launcher-$VERSION-mac-temp.dmg"
-        local final_dmg="$ARTIFACTS_DIR/anki-launcher-$VERSION-mac.dmg"
+        local temp_dmg="$ARTIFACTS_DIR/AnkiBlur-temp.dmg"
+        local final_dmg="$ARTIFACTS_DIR/AnkiBlur-$VERSION.dmg"
 
         # Calculate size needed (app bundle size + 50MB buffer)
         local bundle_size=$(du -sm "$app_bundle" | cut -f1)
@@ -178,7 +180,7 @@ package_macos() {
         fi
     else
         log_error "Neither DMG file nor app bundle found"
-        log_error "Expected DMG: $dmg_file"
+        log_error "Expected DMG: $ANKI_SOURCE/out/launcher/AnkiBlur*.dmg"
         log_error "Expected app bundle: $app_bundle"
         return 1
     fi
@@ -193,7 +195,7 @@ package_macos() {
         echo "Patches Applied: AnkiBlur branding, core patches, addon integration"
         echo "Build Date: $(date -u)"
         echo "Note: Code signing may not be present in CI builds"
-    } > "$ARTIFACTS_DIR/anki-launcher-$VERSION-mac.info"
+    } > "$ARTIFACTS_DIR/AnkiBlur-mac.info"
 
     return 0
 }
@@ -313,8 +315,9 @@ verify_package() {
             fi
             ;;
         macos)
-            local package_file="$ARTIFACTS_DIR/anki-launcher-$VERSION-mac.dmg"
-            if [[ -f "$package_file" ]]; then
+            local package_file
+            package_file=$(find "$ARTIFACTS_DIR" -maxdepth 1 -name 'AnkiBlur*.dmg' -type f 2>/dev/null | head -1)
+            if [[ -n "$package_file" && -f "$package_file" ]]; then
                 local size=$(stat -c%s "$package_file" 2>/dev/null || stat -f%z "$package_file" 2>/dev/null || echo "unknown")
                 log_info "macOS package size: $size bytes"
                 log_success "macOS package integrity check completed"

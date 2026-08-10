@@ -391,7 +391,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/q
 +            if let Err(e) = addon::install_ankiblur_addon() {
 +                println!("\n*******************************************************");
 +                println!("WARNING: AnkiBlur add-on install FAILED: {e:#}");
-+                println!("Anki will start WITHOUT the blur/tint add-on.");
++                println!("AnkiBlur will start WITHOUT the blur/tint add-on.");
 +                println!("Please report this at https://github.com/NullGates/AnkiBlur/issues");
 +                println!("*******************************************************\n");
 +            }

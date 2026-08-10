@@ -114,12 +114,19 @@ jobs:
         # Create version file
         echo "${{ env.ANKI_VERSION }}" > .version
 
+        # Name the DMG after the Anki version the patches actually pin
+        # (ANKIBLUR_ANKI_VERSION from patch 02), not the source branch we
+        # build from -- e.g. branch 25.09 ships pinned 25.09.2.
+        BLUR_ANKI_VERSION=$(sed -n 's/^const ANKIBLUR_ANKI_VERSION: &str = "\(.*\)";$/\1/p' qt/launcher/src/main.rs)
+        test -n "$BLUR_ANKI_VERSION" || { echo "ANKIBLUR_ANKI_VERSION not found in qt/launcher/src/main.rs"; exit 1; }
+        echo "DMG_NAME=AnkiBlur-${BLUR_ANKI_VERSION}.dmg" >> "$GITHUB_ENV"
+
     - name: Extract UV binaries
       working-directory: anki-source
       run: |
         set -euo pipefail
         # Create universal UV binary for macOS. This is the uv that ships
-        # inside (and is codesigned into) Anki.app -- the build script below
+        # inside (and is codesigned into) AnkiBlur.app -- the build script below
         # copies out/uv into Contents/MacOS.
         mkdir -p out
         curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-apple-darwin.tar.gz" -o uv-x86_64.tar.gz
@@ -145,7 +152,7 @@ jobs:
 
         # Define output path
         OUTPUT_DIR="../../../out/launcher"
-        APP_LAUNCHER="$OUTPUT_DIR/Anki.app"
+        APP_LAUNCHER="$OUTPUT_DIR/AnkiBlur.app"
 
         # Build binaries for both architectures
         echo "Building launcher for both architectures..."
@@ -270,11 +277,11 @@ jobs:
         # The launcher build (Rust compiled for BOTH apple-darwin targets, plus
         # the ./ninja bootstrap) fills the small macOS runner disk, so hdiutil
         # was failing with "No space left on device" when writing the DMG. The
-        # universal binary and uv are already baked into Anki.app, so every one
+        # universal binary and uv are already baked into AnkiBlur.app, so every one
         # of these build intermediates is safe to drop before packaging.
         echo "Disk before cleanup:"; df -h .
         rm -rf target || true
-        # keep out/launcher (Anki.app); drop the other ninja/build outputs
+        # keep out/launcher (AnkiBlur.app); drop the other ninja/build outputs
         find out -mindepth 1 -maxdepth 1 ! -name launcher -exec rm -rf {} + 2>/dev/null || true
         rm -rf uv-*.tar.gz uv-x86_64-apple-darwin uv-aarch64-apple-darwin || true
         rm -rf "$HOME/.cargo/registry/cache" "$HOME/.cargo/registry/src" || true
@@ -287,7 +294,7 @@ jobs:
         SIGN_ID: "Developer ID Application: VS NETWORK (X5L73KV432)"
       run: |
         set -euo pipefail
-        APP="out/launcher/Anki.app"
+        APP="out/launcher/AnkiBlur.app"
         ENTITLEMENTS="qt/launcher/mac/entitlements.python.xml"
 
         # Hardened runtime + Python entitlements are required for notarization
@@ -312,20 +319,20 @@ jobs:
       working-directory: anki-source
       run: |
         set -euo pipefail
-        if [ ! -d "out/launcher/Anki.app" ]; then
-          echo "Error: Anki.app not found at out/launcher/Anki.app"
+        if [ ! -d "out/launcher/AnkiBlur.app" ]; then
+          echo "Error: AnkiBlur.app not found at out/launcher/AnkiBlur.app"
           ls -la out/launcher/ || echo "out/launcher directory not found"
           exit 1
         fi
 
-        # Reclaim every non-essential byte first: at DMG time only Anki.app
+        # Reclaim every non-essential byte first: at DMG time only AnkiBlur.app
         # matters, and the runner disk is nearly full after the dual-target
         # build (hdiutil was failing with "No space left on device").
         rm -rf target "$HOME/.cargo/registry" "$HOME/.rustup" 2>/dev/null || true
-        find out/launcher -mindepth 1 -maxdepth 1 ! -name Anki.app -exec rm -rf {} + 2>/dev/null || true
+        find out/launcher -mindepth 1 -maxdepth 1 ! -name AnkiBlur.app -exec rm -rf {} + 2>/dev/null || true
         echo "Disk before DMG:"; df -h .
 
-        DMG_NAME="anki-launcher-${ANKI_VERSION}-mac.dmg"
+        : "${DMG_NAME:?DMG_NAME not set (exported by Setup Build Environment)}"
         echo "Creating DMG: $DMG_NAME"
 
         # Stage with MOVE, not copy: copying briefly doubles the
@@ -333,7 +340,7 @@ jobs:
         # (same filesystem) and uses no extra space. The signed app is
         # preserved; we only need the DMG afterwards.
         mkdir -p dmg_stage
-        mv out/launcher/Anki.app dmg_stage/
+        mv out/launcher/AnkiBlur.app dmg_stage/
         # AGPL conveyance: ship the license text alongside the app. Files
         # outside the .app do not affect the bundle signature; the DMG is
         # notarized afterwards as before.
@@ -366,7 +373,7 @@ jobs:
         AC_API_ISSUER_ID: ${{ secrets.AC_API_ISSUER_ID }}
       run: |
         set -euo pipefail
-        DMG="out/launcher/anki-launcher-${ANKI_VERSION}-mac.dmg"
+        DMG="out/launcher/${DMG_NAME}"
         KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
 
         # Decode the App Store Connect API key
@@ -414,8 +421,8 @@ jobs:
       run: |
         mkdir -p artifacts
         # Copy the DMG we created
-        if [ -f "anki-source/out/launcher/anki-launcher-${ANKI_VERSION}-mac.dmg" ]; then
-          cp "anki-source/out/launcher/anki-launcher-${ANKI_VERSION}-mac.dmg" artifacts/
+        if [ -f "anki-source/out/launcher/${DMG_NAME}" ]; then
+          cp "anki-source/out/launcher/${DMG_NAME}" artifacts/
           echo "DMG copied to artifacts"
         else
           echo "Error: DMG not found"
@@ -429,10 +436,10 @@ jobs:
       shell: bash
       run: |
         cd artifacts
-        if [ -f "anki-launcher-${ANKI_VERSION}-mac.dmg" ]; then
-          shasum -a 256 "anki-launcher-${ANKI_VERSION}-mac.dmg" > "anki-launcher-${ANKI_VERSION}-mac.dmg.sha256"
+        if [ -f "${DMG_NAME}" ]; then
+          shasum -a 256 "${DMG_NAME}" > "${DMG_NAME}.sha256"
           echo "Checksum generated:"
-          cat "anki-launcher-${ANKI_VERSION}-mac.dmg.sha256"
+          cat "${DMG_NAME}.sha256"
         else
           echo "Error: DMG not found in artifacts"
           ls -la

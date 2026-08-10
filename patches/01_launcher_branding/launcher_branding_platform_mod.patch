@@ -1,0 +1,13 @@
+--- original_anki_src_repo/qt/launcher/src/platform/mod.rs	2025-11-16 20:59:15.520721503 +0100
++++ v1_from_src_repo/qt/launcher/src/platform/mod.rs	2026-08-10 13:53:48.642492279 +0200
+@@ -125,8 +125,8 @@
+         unix::relaunch_in_terminal()?;
+     }
+ 
+-    // Set terminal title to "Anki Launcher"
+-    print!("\x1b]2;Anki Launcher\x07");
++    // Set terminal title to "AnkiBlur Launcher"
++    print!("\x1b]2;AnkiBlur Launcher\x07");
+     Ok(())
+ }
+ 

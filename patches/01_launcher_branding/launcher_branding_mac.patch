@@ -16,3 +16,37 @@
                              );
                          }
                      }
+--- original_anki_src_repo/qt/launcher/mac/Info.plist	2025-11-16 20:59:15.518791168 +0100
++++ v1_from_src_repo/qt/launcher/mac/Info.plist	2026-08-10 13:53:54.586494638 +0200
+@@ -3,7 +3,7 @@
+ <plist version="1.0">
+ 	<dict>
+ 		<key>CFBundleDisplayName</key>
+-		<string>Anki</string>
++		<string>AnkiBlur</string>
+ 		<key>CFBundleShortVersionString</key>
+ 		<string>ANKI_VERSION</string>
+ 		<key>LSMinimumSystemVersion</key>
+@@ -22,7 +22,7 @@
+ 				<key>CFBundleTypeIconName</key>
+ 				<string>AppIcon</string>
+ 				<key>CFBundleTypeName</key>
+-				<string>Anki File</string>
++				<string>AnkiBlur File</string>
+ 				<key>CFBundleTypeRole</key>
+ 				<string>Editor</string>
+ 			</dict>
+@@ -32,11 +32,11 @@
+ 		<key>CFBundleIconName</key>
+ 		<string>AppIcon</string>
+ 		<key>CFBundleIdentifier</key>
+-		<string>net.ankiweb.launcher</string>
++		<string>org.ankiblur.launcher</string>
+ 		<key>CFBundleInfoDictionaryVersion</key>
+ 		<string>6.0</string>
+ 		<key>CFBundleName</key>
+-		<string>Anki</string>
++		<string>AnkiBlur</string>
+ 		<key>CFBundlePackageType</key>
+ 		<string>APPL</string>
+ 		<key>NSHighResolutionCapable</key>

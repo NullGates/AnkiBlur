@@ -1,5 +1,5 @@
 --- original_anki_src_repo/qt/launcher/src/main.rs	2025-11-16 20:59:15.520599505 +0100
-+++ v1_from_src_repo/qt/launcher/src/main.rs	2025-11-16 20:58:48.815379341 +0100
++++ v1_from_src_repo/qt/launcher/src/main.rs	2026-08-10 13:53:58.033999055 +0200
 @@ -95,7 +95,7 @@
      } else {
          dirs::data_local_dir()
@@ -71,6 +71,15 @@
              return Err(e.into());
          }
      };
+@@ -911,7 +911,7 @@
+ }
+ 
+ fn handle_uninstall(state: &State) -> Result<bool> {
+-    println!("Uninstall Anki's program files? (y/n)");
++    println!("Uninstall AnkiBlur's program files? (y/n)");
+     print!("> ");
+     let _ = stdout().flush();
+ 
 @@ -997,7 +997,7 @@
      };
  
