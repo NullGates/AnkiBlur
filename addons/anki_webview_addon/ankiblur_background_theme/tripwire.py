@@ -53,11 +53,16 @@ def _load_state() -> dict:
 
 
 def _write_state(state: dict) -> None:
+    # Atomic (tmp + replace): the AnkiBlur launcher polls this file from
+    # another process to print its post-install patch recap, and must never
+    # observe a half-written JSON document.
     try:
         path = _state_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        tmp_path = path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, sort_keys=True)
+        os.replace(tmp_path, path)
     except Exception:
         traceback.print_exc()
 
@@ -155,6 +160,13 @@ def _check_inner(ops: dict) -> None:
     state = _load_state()
     state["anki_version"] = anki_version
     state["ops"] = dict(ops)
+    # Full verdict for the launcher's post-install recap: `failing` includes
+    # the computed probes above, which are not part of `ops`.
+    state["result"] = "fail" if failing else "pass"
+    state["failing"] = dict(failing)
+    # This run initialized fine, so any fatal record from an earlier run is
+    # stale.
+    state.pop("fatal", None)
 
     if not failing:
         _write_state(state)
@@ -200,6 +212,15 @@ def report_fatal(exc: BaseException) -> None:
         f"Please report this at:\n{ISSUES_URL}"
     )
     print(f"[AnkiBlur] FATAL: add-on failed to initialize: {exc!r}")
+
+    # Record the crash for the launcher's post-install recap; without this
+    # the launcher would only see a timeout and could not tell "add-on
+    # crashed" from "Anki never started".
+    state = _load_state()
+    state["anki_version"] = _anki_version()
+    state["result"] = "fatal"
+    state["fatal"] = f"{type(exc).__name__}: {exc}"
+    _write_state(state)
 
     def _later() -> None:
         QTimer.singleShot(1000, lambda: _show_warning(message))

@@ -1,6 +1,6 @@
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/Cargo.toml v2_03_addon_from_02/qt/launcher/Cargo.toml
---- cp_from_02/qt/launcher/Cargo.toml	2026-07-18 00:08:03.400311863 +0200
-+++ v2_03_addon_from_02/qt/launcher/Cargo.toml	2026-07-18 00:09:04.502836393 +0200
+--- cp_from_02/qt/launcher/Cargo.toml	2026-08-10 15:57:20.518407662 +0200
++++ v2_03_addon_from_02/qt/launcher/Cargo.toml	2026-08-10 15:57:36.074356971 +0200
 @@ -14,6 +14,7 @@
  camino.workspace = true
  dirs.workspace = true
@@ -11,7 +11,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/q
  libc.workspace = true
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/src/addon.rs v2_03_addon_from_02/qt/launcher/src/addon.rs
 --- cp_from_02/qt/launcher/src/addon.rs	1970-01-01 01:00:00.000000000 +0100
-+++ v2_03_addon_from_02/qt/launcher/src/addon.rs	2026-07-18 00:08:46.313784170 +0200
++++ v2_03_addon_from_02/qt/launcher/src/addon.rs	2026-08-10 16:00:28.675614271 +0200
 @@ -0,0 +1,359 @@
 +// AnkiBlur: install the bundled blur/tint add-on into the user's Anki base.
 +//
@@ -33,7 +33,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/q
 +
 +static ADDON_ZIP: &[u8] = include_bytes!("../addon/ankiblur_background_theme.ankiaddon");
 +
-+const ADDON_DIR_NAME: &str = "ankiblur_background_theme";
++pub const ADDON_DIR_NAME: &str = "ankiblur_background_theme";
 +
 +/// Files that must exist after extraction; their absence means the install
 +/// went wrong and must fail loudly.
@@ -71,7 +71,7 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/q
 +
 +/// Resolve the addons21 dir the way Anki does: ANKI_BASE first, then the
 +/// platform default.
-+fn addons21_path() -> Result<PathBuf> {
++pub fn addons21_path() -> Result<PathBuf> {
 +    if let Ok(base) = std::env::var("ANKI_BASE") {
 +        if !base.trim().is_empty() {
 +            return Ok(PathBuf::from(base).join("addons21"));
@@ -373,29 +373,409 @@ diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/q
 +    }
 +}
 diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/src/main.rs v2_03_addon_from_02/qt/launcher/src/main.rs
---- cp_from_02/qt/launcher/src/main.rs	2026-07-18 00:08:03.402786068 +0200
-+++ v2_03_addon_from_02/qt/launcher/src/main.rs	2026-07-18 00:09:04.507529908 +0200
-@@ -28,6 +28,7 @@
+--- cp_from_02/qt/launcher/src/main.rs	2026-08-10 15:57:26.455013276 +0200
++++ v2_03_addon_from_02/qt/launcher/src/main.rs	2026-08-10 16:00:40.373555818 +0200
+@@ -28,7 +28,9 @@
  use crate::platform::launch_anki_normally;
  use crate::platform::respawn_launcher;
  
 +mod addon;
  mod cleanup;
++mod recap;
  mod platform;
  
-@@ -356,6 +357,15 @@
+ /// AnkiBlur: the Anki release the bundled blur add-on is validated against.
+@@ -195,16 +197,24 @@
+         let mut input = String::new();
+         let _ = stdin().read_line(&mut input);
+     } else {
+-        // on Windows/macOS, the user needs to close the terminal/console
+-        // currently, but ideas on how we can avoid this would be good!
++        // on Windows/macOS the terminal stays open; the patch recap below
++        // prints the "you can close this window" hint once it is done.
+         println!();
+-        println!("AnkiBlur will start shortly.");
+-        println!("\x1B[1mYou can close this window.\x1B[0m\n");
++        println!("AnkiBlur will start shortly.\n");
+     }
+ 
++    // AnkiBlur: snapshot the tripwire report before Anki starts, so a
++    // stale report from an earlier run is never mistaken for this run's.
++    let recap_baseline = recap::prepare();
++
+     // respawn the launcher as a disconnected subprocess for normal startup
+     respawn_launcher()?;
+ 
++    // AnkiBlur: Anki is now starting detached, so its stdout (including the
++    // add-on's patch self-check) never reaches this terminal. Wait for the
++    // add-on's persisted verdict and print which patches applied/failed.
++    recap::wait_and_print(&recap_baseline);
++
+     Ok(())
+ }
+ 
+@@ -362,6 +372,23 @@
                  }
              }
  
 +            // Install the bundled AnkiBlur add-on
-+            if let Err(e) = addon::install_ankiblur_addon() {
-+                println!("\n*******************************************************");
-+                println!("WARNING: AnkiBlur add-on install FAILED: {e:#}");
-+                println!("AnkiBlur will start WITHOUT the blur/tint add-on.");
-+                println!("Please report this at https://github.com/NullGates/AnkiBlur/issues");
-+                println!("*******************************************************\n");
++            match addon::install_ankiblur_addon() {
++                Ok(()) => {
++                    recap::note_addon_install(recap::AddonInstallOutcome::Installed);
++                }
++                Err(e) => {
++                    println!("\n*******************************************************");
++                    println!("WARNING: AnkiBlur add-on install FAILED: {e:#}");
++                    println!("AnkiBlur will start WITHOUT the blur/tint add-on.");
++                    println!("Please report this at https://github.com/NullGates/AnkiBlur/issues");
++                    println!("*******************************************************\n");
++                    recap::note_addon_install(recap::AddonInstallOutcome::Failed(format!(
++                        "{e:#}"
++                    )));
++                }
 +            }
 +
              Ok(())
          }
          Err(e) => {
+diff -ruN '--exclude=Cargo.lock' '--exclude=out' '--exclude=target' cp_from_02/qt/launcher/src/recap.rs v2_03_addon_from_02/qt/launcher/src/recap.rs
+--- cp_from_02/qt/launcher/src/recap.rs	1970-01-01 01:00:00.000000000 +0100
++++ v2_03_addon_from_02/qt/launcher/src/recap.rs	2026-08-10 15:59:55.048379873 +0200
+@@ -0,0 +1,337 @@
++// AnkiBlur: post-launch patch recap.
++//
++// The blur "patches" are applied at Anki startup by the bundled add-on,
++// which verifies every operation a few seconds after the main window is up
++// (tripwire.py) and persists the verdict to
++// addons21/ankiblur_background_theme/user_files/ankiblur-state.json.
++// Anki runs detached from the install terminal, so its stdout is invisible
++// there; instead we poll that state file after handing off to Anki and
++// print an applied/failed recap before the terminal goes quiet.
++
++use std::path::PathBuf;
++use std::sync::Mutex;
++use std::time::Duration;
++use std::time::Instant;
++use std::time::SystemTime;
++
++use serde_json::Value;
++
++const ISSUES_URL: &str = "https://github.com/NullGates/AnkiBlur/issues";
++
++/// How long to wait for Anki to start and the add-on tripwire to report.
++/// First launches are slow (venv byte-compilation, Qt cold start), and the
++/// tripwire itself waits ~3s after the main window appears.
++const WAIT_TIMEOUT: Duration = Duration::from_secs(120);
++const POLL_INTERVAL: Duration = Duration::from_secs(1);
++
++pub enum AddonInstallOutcome {
++    /// This launcher run never tried to (re)install the add-on files
++    /// (e.g. "keep existing version" without changes).
++    NotAttempted,
++    Installed,
++    Failed(String),
++}
++
++static INSTALL_OUTCOME: Mutex<AddonInstallOutcome> =
++    Mutex::new(AddonInstallOutcome::NotAttempted);
++
++/// Called from the install path so the recap can report the file-install
++/// step alongside the runtime patch results.
++pub fn note_addon_install(outcome: AddonInstallOutcome) {
++    if let Ok(mut guard) = INSTALL_OUTCOME.lock() {
++        *guard = outcome;
++    }
++}
++
++pub struct Baseline {
++    state_path: Option<PathBuf>,
++    mtime: Option<SystemTime>,
++}
++
++/// Capture the pre-launch mtime of the tripwire report so a stale file
++/// from an earlier run is never mistaken for this run's verdict.
++/// Call BEFORE spawning Anki.
++pub fn prepare() -> Baseline {
++    let state_path = crate::addon::addons21_path()
++        .ok()
++        .map(|p| p.join(crate::addon::ADDON_DIR_NAME).join("user_files").join("ankiblur-state.json"));
++    let mtime = state_path
++        .as_ref()
++        .and_then(|p| std::fs::metadata(p).ok())
++        .and_then(|m| m.modified().ok());
++    Baseline { state_path, mtime }
++}
++
++/// Wait for the add-on's self-check and print the recap. Anki is already
++/// detached, so waiting here never delays it, and nothing in this function
++/// may fail the launcher.
++pub fn wait_and_print(baseline: &Baseline) {
++    use std::io::Write;
++
++    println!("\x1B[1mAnkiBlur patch recap\x1B[0m");
++
++    let install_failed = match &*INSTALL_OUTCOME
++        .lock()
++        .unwrap_or_else(|poisoned| poisoned.into_inner())
++    {
++        AddonInstallOutcome::Installed => {
++            println!("  [ok]     add-on files installed");
++            false
++        }
++        AddonInstallOutcome::NotAttempted => false,
++        AddonInstallOutcome::Failed(e) => {
++            println!("  [FAILED] add-on file install: {e}");
++            true
++        }
++    };
++    if install_failed {
++        // Without the add-on files nothing can engage; waiting for a
++        // report that will never come would just confuse.
++        println!("\nThe blur patches cannot engage without the add-on files.");
++        println!("Please report this at {ISSUES_URL}");
++        println!("\n\x1B[1mYou can close this window.\x1B[0m\n");
++        return;
++    }
++
++    let Some(state_path) = &baseline.state_path else {
++        println!("  (could not locate the Anki data folder; no recap available)");
++        println!("\n\x1B[1mYou can close this window.\x1B[0m\n");
++        return;
++    };
++
++    println!(
++        "Waiting for AnkiBlur to start and verify its patches (up to {} min)...",
++        WAIT_TIMEOUT.as_secs() / 60
++    );
++    println!("(AnkiBlur starts independently; you can close this window at any time.)");
++
++    let deadline = Instant::now() + WAIT_TIMEOUT;
++    let mut report = None;
++    while Instant::now() < deadline {
++        if let Some(state) = read_fresh_report(state_path, baseline.mtime) {
++            report = Some(state);
++            break;
++        }
++        print!(".");
++        let _ = std::io::stdout().flush();
++        std::thread::sleep(POLL_INTERVAL);
++    }
++    println!();
++
++    match report {
++        Some(state) => print_report(&state),
++        None => {
++            println!("No patch report was received from AnkiBlur within the wait window.");
++            println!("If AnkiBlur is running, the patches may still report late; the add-on");
++            println!("shows a warning dialog inside AnkiBlur whenever a patch fails.");
++            println!("Full status file: {}", state_path.display());
++        }
++    }
++
++    println!("\n\x1B[1mYou can close this window.\x1B[0m\n");
++}
++
++/// The report, but only if it was (re)written after our baseline; a stale
++/// or half-written file yields None so the caller keeps polling.
++fn read_fresh_report(path: &std::path::Path, baseline: Option<SystemTime>) -> Option<Value> {
++    let meta = std::fs::metadata(path).ok()?;
++    let mtime = meta.modified().ok();
++    if baseline.is_some() && mtime == baseline {
++        return None;
++    }
++    let bytes = std::fs::read(path).ok()?;
++    let state: Value = serde_json::from_slice(&bytes).ok()?;
++    // Reports from add-on versions predating the recap lack "result";
++    // treat them as not-yet-ready rather than printing an empty recap.
++    state.get("result")?;
++    Some(state)
++}
++
++fn op_label(op: &str) -> &'static str {
++    match op {
++        "webview_symbols" => "webview API symbols present",
++        "fixup_existing" => "existing webviews made transparent",
++        "wrap_init" => "webview transparency hook (init)",
++        "wrap_theme" => "webview transparency hook (theme)",
++        "wrap_css" => "webview transparency hook (css)",
++        "liquidglass_import" => "macOS liquid-glass module",
++        "mac_glass" => "macOS native window translucency",
++        "linux_translucent" => "Linux window translucency",
++        "linux_autofill" => "Linux background autofill disabled",
++        "linux_frameless" => "Linux frameless window",
++        "win_frameless" => "Windows frameless window",
++        "win_blur" => "Windows native blur backend",
++        "probe_window_translucent" => "verify: main window is translucent",
++        "probe_page_alpha" => "verify: webview page is transparent",
++        "probe_win_backend" => "verify: Windows blur backend engaged",
++        _ => "",
++    }
++}
++
++fn status_ok(status: &str) -> bool {
++    status == "ok" || status.starts_with("ok:")
++}
++
++fn print_report(state: &Value) {
++    println!("{}", render_report(state));
++}
++
++/// Render the recap body. Pure so it can be unit-tested.
++fn render_report(state: &Value) -> String {
++    use std::fmt::Write;
++
++    let mut out = String::new();
++
++    if let Some(version) = state.get("anki_version").and_then(Value::as_str) {
++        let _ = writeln!(out, "Patch status reported by AnkiBlur (Anki {version}):");
++    } else {
++        let _ = writeln!(out, "Patch status reported by AnkiBlur:");
++    }
++
++    if state.get("result").and_then(Value::as_str) == Some("fatal") {
++        let detail = state
++            .get("fatal")
++            .and_then(Value::as_str)
++            .unwrap_or("unknown error");
++        let _ = writeln!(out, "  [FAILED] the AnkiBlur add-on crashed during startup:");
++        let _ = writeln!(out, "           {detail}");
++        let _ = writeln!(out, "\nAnkiBlur keeps working, but WITHOUT the blur patches.");
++        let _ = write!(out, "Please report this at {ISSUES_URL}");
++        return out;
++    }
++
++    // Merge the recorded ops with the failing set: the computed verification
++    // probes only ever appear in "failing".
++    let mut merged: std::collections::BTreeMap<String, String> = Default::default();
++    for key in ["ops", "failing"] {
++        if let Some(map) = state.get(key).and_then(Value::as_object) {
++            for (op, status) in map {
++                if let Some(status) = status.as_str() {
++                    merged.insert(op.clone(), status.to_string());
++                }
++            }
++        }
++    }
++
++    if merged.is_empty() {
++        let _ = write!(out, "  (no operations were recorded - this looks like a bug;\n   please report it at {ISSUES_URL})");
++        return out;
++    }
++
++    let mut applied = 0usize;
++    let mut failed = 0usize;
++    for (op, status) in &merged {
++        let label = op_label(op);
++        let name = if label.is_empty() {
++            op.clone()
++        } else {
++            format!("{label} ({op})")
++        };
++        if status_ok(status) {
++            applied += 1;
++            let detail = status.strip_prefix("ok:").map(str::trim).unwrap_or("");
++            if detail.is_empty() {
++                let _ = writeln!(out, "  [ok]     {name}");
++            } else {
++                let _ = writeln!(out, "  [ok]     {name} - {detail}");
++            }
++        } else {
++            failed += 1;
++            let _ = writeln!(out, "  [FAILED] {name}: {status}");
++        }
++    }
++
++    if failed == 0 {
++        let _ = write!(
++            out,
++            "\nAll {applied} patches applied successfully - the blur is active."
++        );
++    } else {
++        let _ = writeln!(
++            out,
++            "\n{applied} patches applied, \x1B[1m{failed} FAILED\x1B[0m - the blur may not be (fully) active."
++        );
++        let _ = write!(out, "Please report this at {ISSUES_URL}");
++    }
++    out
++}
++
++#[cfg(test)]
++mod tests {
++    use serde_json::json;
++
++    use super::*;
++
++    #[test]
++    fn pass_report_lists_all_ops_as_applied() {
++        let state = json!({
++            "anki_version": "25.09.2",
++            "result": "pass",
++            "failing": {},
++            "ops": {
++                "mac_glass": "ok",
++                "webview_symbols": "ok",
++                "wrap_init": "ok",
++            },
++        });
++        let text = render_report(&state);
++        assert!(text.contains("Anki 25.09.2"));
++        assert!(text.contains("[ok]     macOS native window translucency (mac_glass)"));
++        assert!(text.contains("All 3 patches applied successfully"));
++        assert!(!text.contains("[FAILED]"));
++    }
++
++    #[test]
++    fn fail_report_includes_probes_and_summary() {
++        let state = json!({
++            "result": "fail",
++            "ops": {
++                "mac_glass": "failed: gave up after 15 retries",
++                "wrap_init": "ok",
++            },
++            "failing": {
++                "mac_glass": "failed: gave up after 15 retries",
++                "probe_page_alpha": "failed: main webview page background alpha is 255, expected 0",
++            },
++        });
++        let text = render_report(&state);
++        assert!(text.contains("[FAILED] macOS native window translucency (mac_glass): failed: gave up after 15 retries"));
++        assert!(text.contains("verify: webview page is transparent (probe_page_alpha)"));
++        assert!(text.contains("1 patches applied"));
++        assert!(text.contains(ISSUES_URL));
++    }
++
++    #[test]
++    fn ok_detail_status_is_shown_and_counted_as_applied() {
++        let state = json!({
++            "result": "pass",
++            "ops": { "win_blur": "ok: backend=accent-acrylic" },
++            "failing": {},
++        });
++        let text = render_report(&state);
++        assert!(text.contains("[ok]     Windows native blur backend (win_blur) - backend=accent-acrylic"));
++        assert!(text.contains("All 1 patches applied"));
++    }
++
++    #[test]
++    fn fatal_report_shows_crash_detail() {
++        let state = json!({
++            "result": "fatal",
++            "fatal": "ImportError: No module named aqt.theme",
++        });
++        let text = render_report(&state);
++        assert!(text.contains("crashed during startup"));
++        assert!(text.contains("ImportError: No module named aqt.theme"));
++    }
++
++    #[test]
++    fn unknown_ops_fall_back_to_raw_id() {
++        let state = json!({
++            "result": "pass",
++            "ops": { "future_op": "ok" },
++            "failing": {},
++        });
++        let text = render_report(&state);
++        assert!(text.contains("  [ok]     future_op\n"));
++    }
++}
