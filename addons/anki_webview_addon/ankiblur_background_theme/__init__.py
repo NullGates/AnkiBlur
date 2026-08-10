@@ -25,6 +25,7 @@ try:
     from aqt.theme import theme_manager
     from anki.hooks import wrap
 
+    from . import branding
     from . import defaults
     from . import tripwire
     from . import webview_transparency
@@ -257,6 +258,7 @@ try:
     overlay = TransparentOverlay()
     window_effects.apply(ops)
     webview_transparency.apply(ops)
+    branding.apply(ops)
     tripwire.arm(ops)
 
     mw.addonManager.setConfigAction(__name__, on_config)

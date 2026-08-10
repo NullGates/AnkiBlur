@@ -141,7 +141,8 @@ jobs:
           mods = {
               name: importlib.import_module(f"ankiblur_background_theme.{name}")
               for name in ("tripwire", "webview_transparency",
-                           "window_effects", "config_dialog")
+                           "window_effects", "config_dialog",
+                           "branding", "defaults")
           }
 
           # The entry points the launcher-era payload calls must exist.
@@ -153,6 +154,9 @@ jobs:
               ("tripwire", "check"),
               ("tripwire", "report_fatal"),
               ("config_dialog", "ColorConfigDialog"),
+              ("branding", "apply"),
+              ("defaults", "effective_config"),
+              ("defaults", "theme_fallback"),
           ]:
               assert callable(getattr(mods.get(mod_name), attr, None)), \
                   f"{mod_name}.{attr} missing or not callable"
