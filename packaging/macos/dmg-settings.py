@@ -8,8 +8,6 @@
 # The geometry below is what packaging/macos/dmg-background.png was drawn
 # for (660x480 pt window, 128 pt icons) -- keep them in sync. See README.md.
 
-import os.path
-
 app = defines.get("app", "out/launcher/AnkiBlur.app")  # noqa: F821
 license_file = defines.get("license", "LICENSE")  # noqa: F821
 notice_file = defines.get("notice", "NOTICE")  # noqa: F821
@@ -25,9 +23,11 @@ icon_locations = {
     "NOTICE": (420, 368),
 }
 
-background = defines.get(  # noqa: F821
-    "background", os.path.join(os.path.dirname(__file__), "dmg-background.png")
-)
+# dmgbuild exec()s this file without __file__ in the namespace, and .get()
+# evaluates its default eagerly even when -D background is passed - so the
+# fallback must not touch __file__. Relative to the cwd, which is the repo
+# root both in CI and in the documented invocation above.
+background = defines.get("background", "packaging/macos/dmg-background.png")  # noqa: F821
 
 format = defines.get("format", "UDZO")  # noqa: F821
 # Explicit size: hdiutil auto-sizing has produced ENOSPC inside the mounted
