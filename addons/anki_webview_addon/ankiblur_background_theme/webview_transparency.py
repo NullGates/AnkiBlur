@@ -106,6 +106,33 @@ def apply(ops: dict) -> None:
         traceback.print_exc()
         ops["wrap_theme"] = f"failed: {e}"
 
+    # The wrap above never fires for the three main webviews that already
+    # exist: AnkiWebView.__init__ registered their on_theme_did_change as
+    # *bound methods* into gui_hooks.theme_did_change before this add-on
+    # loaded (setupMainWindow runs before setupAddons), and a bound method
+    # keeps the original __func__ across the class patch. So on theme change
+    # upstream's opaque canvas reset ran and our re-clear never did - the
+    # main window went opaque black/white while the titlebar kept blurring.
+    # Registering our own hook here (i.e. after theirs) runs it after those
+    # stale handlers; instances created after us are covered by the wrap.
+    try:
+        from aqt import gui_hooks
+
+        def reclear_main_views() -> None:
+            try:
+                for attr in ("toolbarWeb", "web", "bottomWeb"):
+                    view = getattr(mw, attr, None)
+                    if view is not None and _is_main_kind(view):
+                        view.page().setBackgroundColor(QColor(0, 0, 0, 0))
+            except Exception:
+                traceback.print_exc()
+
+        gui_hooks.theme_did_change.append(reclear_main_views)
+        ops["theme_hook"] = "ok"
+    except Exception as e:
+        traceback.print_exc()
+        ops["theme_hook"] = f"failed: {e}"
+
     # Make the page canvas itself transparent for main webviews.
     try:
         def around_standard_css(self, _old):
