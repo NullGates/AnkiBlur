@@ -107,6 +107,22 @@ jobs:
         chmod +x scripts/validate-and-apply-patches.sh
         ./scripts/validate-and-apply-patches.sh anki-source
 
+    - name: Rebuild icon Assets.car from AnkiBlur appiconset
+      shell: bash
+      working-directory: anki-source/qt/launcher/mac/icon
+      run: |
+        set -euo pipefail
+        # validate-and-apply-patches.sh swapped the appiconset PNGs for the
+        # AnkiBlur logo but had to leave upstream's prebuilt Assets.car in
+        # place (actool only exists on macOS). Recompile it here so the mac
+        # build script ships the AnkiBlur icon in Contents/Resources.
+        ls Assets.xcassets/AppIcon.appiconset
+        rm -f Assets.car
+        chmod +x build.sh
+        ./build.sh
+        test -f Assets.car || { echo "actool did not produce Assets.car"; exit 1; }
+        ls -la Assets.car
+
     - name: Setup Build Environment
       shell: bash
       working-directory: anki-source
@@ -335,37 +351,39 @@ jobs:
         : "${DMG_NAME:?DMG_NAME not set (exported by Setup Build Environment)}"
         echo "Creating DMG: $DMG_NAME"
 
-        # Stage with MOVE, not copy: copying briefly doubles the
-        # hundreds-of-MB app on the tiny runner disk. mv is an instant rename
-        # (same filesystem) and uses no extra space. The signed app is
-        # preserved; we only need the DMG afterwards.
-        mkdir -p dmg_stage
-        mv out/launcher/AnkiBlur.app dmg_stage/
-        # Drag-install UX: a symlink to /Applications inside the DMG so the
-        # user drags AnkiBlur.app onto it. Required because running the app
-        # straight from the read-only DMG never lands it in /Applications
-        # (the launcher now also detects that and tells the user to drag).
-        ln -s /Applications dmg_stage/Applications
-        # AGPL conveyance: ship the license text alongside the app. Files
-        # outside the .app do not affect the bundle signature; the DMG is
-        # notarized afterwards as before.
-        cp "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" dmg_stage/
+        # dmgbuild renders the drag-install layout headlessly (background
+        # picture, icon coordinates, window geometry -> .DS_Store) -- no
+        # Finder/AppleScript needed. It also creates the /Applications
+        # symlink and packs LICENSE/NOTICE (AGPL conveyance; files outside
+        # the .app do not affect the bundle signature). Layout lives in
+        # packaging/macos/dmg-settings.py, drawn to match dmg-background.png.
+        # The --break-system-packages fallback covers PEP 668 (brew) pythons.
+        python3 -m pip install --user 'dmgbuild>=1.6,<2' 2>/dev/null \
+          || python3 -m pip install --user --break-system-packages 'dmgbuild>=1.6,<2'
 
-        # Size the image EXPLICITLY. hdiutil's -srcfolder auto-sizing is not
-        # reliably sufficient: on identical input bytes, run 29621161026
-        # passed while run 29621715081 died with "hdiutil: create failed -
-        # No space left on device" inside the mounted intermediate volume
-        # (while the runner disk had 137Gi free). Sum the LOGICAL file sizes
-        # (st_size, immune to APFS clone/sparse undercounting) and add
-        # 25% + 128 MiB headroom; -size overrides the srcfolder estimate
-        # (same pattern as create-dmg and scripts/package-artifacts.sh).
-        STAGE_BYTES=$(find dmg_stage -type f -print0 | xargs -0 stat -f %z | awk '{ s += $1 } END { printf "%d", s + 0 }')
+        # Size the image EXPLICITLY. hdiutil's auto-sizing is not reliably
+        # sufficient: on identical input bytes, run 29621161026 passed while
+        # run 29621715081 died with "hdiutil: create failed - No space left
+        # on device" inside the mounted intermediate volume (while the
+        # runner disk had 137Gi free). Sum the LOGICAL file sizes (st_size,
+        # immune to APFS clone/sparse undercounting) and add 25% + 128 MiB;
+        # the size define overrides dmgbuild's own estimate.
+        STAGE_BYTES=$({ find out/launcher/AnkiBlur.app -type f -print0; \
+            printf '%s\0' "$GITHUB_WORKSPACE/LICENSE" "$GITHUB_WORKSPACE/NOTICE" \
+                "$GITHUB_WORKSPACE/packaging/macos/dmg-background.png"; } \
+          | xargs -0 stat -f %z | awk '{ s += $1 } END { printf "%d", s + 0 }')
         DMG_SIZE_MB=$(( STAGE_BYTES / 1048576 + STAGE_BYTES / 4194304 + 128 ))
-        echo "Staged ${STAGE_BYTES} bytes; creating image with -size ${DMG_SIZE_MB}m"
+        echo "Payload ${STAGE_BYTES} bytes; creating image with size ${DMG_SIZE_MB}m"
 
-        hdiutil create -volname "AnkiBlur" -srcfolder dmg_stage -ov -format UDZO -size "${DMG_SIZE_MB}m" "out/launcher/$DMG_NAME"
+        python3 -m dmgbuild \
+          -s "$GITHUB_WORKSPACE/packaging/macos/dmg-settings.py" \
+          -D app=out/launcher/AnkiBlur.app \
+          -D license="$GITHUB_WORKSPACE/LICENSE" \
+          -D notice="$GITHUB_WORKSPACE/NOTICE" \
+          -D background="$GITHUB_WORKSPACE/packaging/macos/dmg-background.png" \
+          -D size="${DMG_SIZE_MB}m" \
+          "AnkiBlur" "out/launcher/$DMG_NAME"
 
-        rm -rf dmg_stage
         echo "DMG created at out/launcher/$DMG_NAME"
         df -h .
 

@@ -51,7 +51,9 @@ usage() {
     echo ""
     echo "After the patches apply, the AnkiBlur .ankiaddon is built"
     echo "deterministically from addons/ and staged into qt/launcher/addon/"
-    echo "for the launcher's include_bytes! embedding."
+    echo "for the launcher's include_bytes! embedding, and the AnkiBlur icon"
+    echo "assets (patches/01_launcher_branding/icons/) replace the stock Anki"
+    echo "launcher icons (binary files cannot ride in the text patches)."
     echo ""
     exit 1
 }
@@ -303,6 +305,28 @@ main() {
         cmp -s "$ADDON_ZIP" "$REPO_ROOT/addons/anki_webview_addon/ankiblur_background_theme.ankiaddon" \
             || { log_error "Committed .ankiaddon is stale; run scripts/build-addon-zip.py and commit the result"; exit 1; }
         log_success "Addon zip staged: $ADDON_ZIP"
+
+        # Replace the stock Anki launcher icons with the AnkiBlur ones.
+        # Binary assets cannot be expressed in the text .patch files, so they
+        # are staged by copy here (see patches/01_launcher_branding/icons/).
+        log_info "Staging AnkiBlur icon assets over the stock Anki icons"
+        ICONS_DIR="$REPO_ROOT/patches/01_launcher_branding/icons"
+        APPICONSET="$ANKI_SOURCE/qt/launcher/mac/icon/Assets.xcassets/AppIcon.appiconset"
+        for p in "$ICONS_DIR/windows/anki-icon.ico" "$ICONS_DIR/linux/anki.png" \
+                 "$ICONS_DIR/linux/anki.xpm" "$ICONS_DIR/macos/AppIcon.appiconset/Contents.json" \
+                 "$APPICONSET"; do
+            [[ -e "$p" ]] || { log_error "Icon staging: missing $p"; exit 1; }
+        done
+        cp "$ICONS_DIR/windows/anki-icon.ico" "$ANKI_SOURCE/qt/launcher/win/anki-icon.ico"
+        cp "$ICONS_DIR/linux/anki.png" "$ANKI_SOURCE/qt/launcher/lin/anki.png"
+        cp "$ICONS_DIR/linux/anki.xpm" "$ANKI_SOURCE/qt/launcher/lin/anki.xpm"
+        # Full appiconset swap: drop upstream's PNG(s) so only ours remain,
+        # then let the macOS workflow recompile Assets.car with actool
+        # (actool does not exist off-macOS, so the stale upstream Assets.car
+        # is left in place here and replaced at build time).
+        rm -f "$APPICONSET"/*.png
+        cp "$ICONS_DIR/macos/AppIcon.appiconset/"* "$APPICONSET/"
+        log_success "Icon assets staged (win .ico, lin .png/.xpm, mac appiconset)"
 
         # (The interim scripts/ci/hdiutil GITHUB_PATH shim is gone: the
         # explicit -size fix now lives directly in the "Create DMG" step of
