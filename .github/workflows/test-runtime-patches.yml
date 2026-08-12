@@ -173,6 +173,47 @@ jobs:
           assert not bad, f"webview_transparency self-check failed: {bad}"
           print(f"webview_transparency ops all ok: {sorted(ops)}")
 
+          # Regression check (stale bound-method bypass): the main webviews
+          # register their on_theme_did_change *bound methods* into
+          # gui_hooks.theme_did_change before add-ons load, so wrapping the
+          # class method alone never runs for them and upstream's opaque
+          # canvas reset sticks on theme change. The add-on must re-clear
+          # the page background via its own theme_did_change hook,
+          # registered during apply().
+          from aqt import gui_hooks
+          from aqt.webview import AnkiWebViewKind
+          from PyQt6.QtGui import QColor
+
+          class _FakePage:
+              def __init__(self):
+                  self.bg = QColor(0, 0, 0, 0)
+              def setBackgroundColor(self, c):
+                  self.bg = c
+
+          class _FakeView:
+              _kind = AnkiWebViewKind.MAIN
+              def __init__(self):
+                  self._p = _FakePage()
+              def page(self):
+                  return self._p
+
+          class _FakeMw:
+              web = _FakeView()
+              toolbarWeb = None
+              bottomWeb = None
+
+          wt = mods["webview_transparency"]
+          wt.mw = _FakeMw  # apply() ran with mw=None outside Anki
+          # simulate upstream's theme handler resetting to the opaque canvas
+          _FakeMw.web.page().setBackgroundColor(QColor(42, 42, 42, 255))
+          gui_hooks.theme_did_change()
+          alpha = _FakeMw.web.page().bg.alpha()
+          assert alpha == 0, (
+              "theme_did_change left the main webview page background "
+              f"opaque (alpha={alpha}) - the re-clear hook did not run"
+          )
+          print("theme-change re-clear regression check passed")
+
           # Pure helper from window_effects must run and answer.
           expected = mods["window_effects"].translucency_expected()
           assert isinstance(expected, bool), "translucency_expected() broken"
